@@ -6,7 +6,7 @@ import pybo.utils.ldsample as pbs
 
 
 if __name__ == '__main__':
-    model = pbm.Gramacy(0.2)
+    model = pbm.Sinusoidal(0.2)
 
     X = pbs.random(model.bounds, 100)
     y = np.hstack(model.get_data(x) for x in X)

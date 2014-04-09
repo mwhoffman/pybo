@@ -12,7 +12,7 @@ from __future__ import print_function
 import numpy as np
 
 # exported symbols
-__all__ = ['Gramacy', 'Branin', 'Bohachevsky', 'Goldstein']
+__all__ = ['Sinusoidal', 'Gramacy', 'Branin', 'Bohachevsky', 'Goldstein']
 
 
 class GOModel(object):
@@ -39,6 +39,22 @@ class GOModel(object):
         return max(fmax - fx, 0.0)
 
 
+# NOTE: for 1d function models we don't really need to worry about the
+# dimensions for f. Maybe I should add a check for this later.
+
+
+class Sinusoidal(GOModel):
+    """
+    Simple sinusoidal function bounded in [0, 2pi] given by cos(x)+sin(3x).
+    """
+    bounds = [[0, 2*np.pi]]
+    xmax = 3.61439678
+
+    @staticmethod
+    def f(x):
+        return np.ravel(np.cos(x) + np.sin(3*x))
+
+
 class Gramacy(GOModel):
     """
     Sinusoidal function in 1d used by Gramacy and Lee in "Cases for the nugget
@@ -49,9 +65,7 @@ class Gramacy(GOModel):
 
     @staticmethod
     def f(x):
-        # NOTE: technically since this is a 1d function we could pass in either
-        # a column or a row vector.
-        return np.sin(10*np.pi*x) / (2*x) + (x-1)**4
+        return np.ravel(np.sin(10*np.pi*x) / (2*x) + (x-1)**4)
 
 
 class Branin(GOModel):
