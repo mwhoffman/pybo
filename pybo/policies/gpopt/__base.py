@@ -46,9 +46,7 @@ class GPAcq(Policy):
         pass
 
     def get_next(self):
-        # FIXME: make solve_direct take a bounds array.
-        objective = lambda x: -self.get_index(x)
-        xmax, _ = solve_direct(objective, self.bounds[:,0], self.bounds[:,1])
+        xmax, _ = solve_direct(lambda x: -self.get_index(x), self.bounds)
         return xmax
 
     def get_best(self):

@@ -28,12 +28,12 @@ __all__ = ['solve_direct']
 # and passes responsibility off to _run_direct.
 #
 
-def solve_direct(f, lb, ub, nmax=10000, maxit=50, epsilon=1e-10, report=False):
+def solve_direct(f, bounds, nmax=10000, maxit=50, epsilon=1e-10, report=False):
     """
-    solve_direct(f, lb, ub, [nmax, maxit, epsilon, report])
+    solve_direct(f, bounds, [nmax, maxit, epsilon, report])
 
     Perform DIRECT on the given function f over a space where dimension i is
-    bounded by lb[i] and ub[i].
+    bounded by bounds[i][0] and bounds[i][1]
 
     Optional parameters:
         nmax: maximum number of samples.
@@ -42,7 +42,7 @@ def solve_direct(f, lb, ub, nmax=10000, maxit=50, epsilon=1e-10, report=False):
         report: whether or not to report intermediate results.
     """
     # initialize the rectangle structures.
-    f, trans, x, ell, r, fx = _init_rects(f, lb, ub, nmax)
+    f, trans, x, ell, r, fx = _init_rects(f, bounds, nmax)
 
     # run the inner loop, which just continually divides up the rectangles,
     # inserting them into the rects structure, and returns when it reaches nmax.
@@ -69,17 +69,17 @@ def solve_direct(f, lb, ub, nmax=10000, maxit=50, epsilon=1e-10, report=False):
 # just initialize everything. this only really needs to be called once, so we
 # don't need it to be fast at all. so python is fine. (plus it has no loops!)
 
-def _init_rects(f, lb, ub, nmax):
+def _init_rects(f, bounds, nmax):
     """
-    Initialize a set of rectangles inside a bounding box with
-    upper/lower bounds given by the two d-vectors lb and ub
-    respectively. Preallocate room for nmax rectangles (with 2*dim
+    Initialize a set of rectangles inside a bounding box with upper/lower bounds
+    given by the `bounds`. Preallocate room for nmax rectangles (with 2*dim
     wiggle room).
 
     Returns (x, ell, r, fx, ftrans, trans).
     """
-    lb = np.array(lb, dtype=float, ndmin=1, copy=False)
-    ub = np.array(ub, dtype=float, ndmin=1, copy=False)
+    bounds = np.array(bounds, ndmin=2, copy=False)
+    lb = bounds[:,0]
+    ub = bounds[:,1]
     ndim = len(lb)
     nmax += 2*ndim
 
