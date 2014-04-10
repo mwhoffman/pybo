@@ -11,6 +11,7 @@ pybo.models
 pybo.policies._base
 pybo.policies.gpopt._base
 pybo.policies.gpopt.gpucb
+pybo.policies.gpopt.gpei
 pybo.policies.gpopt
 pybo.policies
 pybo
