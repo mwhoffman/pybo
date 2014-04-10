@@ -11,7 +11,7 @@ from __future__ import print_function
 import numpy as np
 
 # local imports
-from .__base import GPAcq
+from ._base import GPAcq
 
 # exported symbols
 __all__ = ['GPUCB']

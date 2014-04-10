@@ -12,7 +12,7 @@ import numpy as np
 import abc
 
 # local imports
-from ..__base import Policy
+from .._base import Policy
 from ._direct import solve_direct
 
 # exported symbols

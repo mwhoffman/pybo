@@ -8,8 +8,8 @@ pybo.utils.ldsample
 pybo.utils
 pybo.models.functions
 pybo.models
-pybo.policies.__base
-pybo.policies.gpopt.__base
+pybo.policies._base
+pybo.policies.gpopt._base
 pybo.policies.gpopt.gpucb
 pybo.policies.gpopt
 pybo.policies
