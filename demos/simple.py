@@ -6,12 +6,8 @@ import pybo.models as pbm
 import pybo.policies as pbp
 
 
-if __name__ == '__main__':
-    sn  = 0.2
-    ell = 0.670104947766
-    sf  = 1.25415619045
-
-    model = pbm.Sinusoidal(0.2)
+def run_model(Model, sn, ell, sf, T):
+    model = Model(0.2)
     gp = pg.BasicGP(sn, ell, sf)
     policy = pbp.GPUCB(gp, model.bounds)
 
@@ -20,7 +16,7 @@ if __name__ == '__main__':
     X = np.linspace(xmin, xmax, 200)[:, None]
     x = (xmax-xmin) / 2
 
-    for i in xrange(40):
+    for i in xrange(T):
         pg.gpplot(policy.gp, xmin=xmin, xmax=xmax)
         pl.plot(X, policy.get_index(X), lw=2)
         pl.axvline(x, color='r')
@@ -31,3 +27,8 @@ if __name__ == '__main__':
         y = model.get_data(x)
         policy.add_data(x, y)
         x = policy.get_next()
+
+
+if __name__ == '__main__':
+    # run_model(pbm.Sinusoidal, 0.2, 0.70, 1.25, 100)
+    run_model(pbm.Gramacy, 0.2, 0.05, 1.25, 100)
