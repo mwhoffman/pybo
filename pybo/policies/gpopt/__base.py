@@ -13,6 +13,7 @@ import abc
 
 # local imports
 from ..__base import Policy
+from ._direct import solve_direct
 
 # exported symbols
 __all__ = ['GPAcq']
@@ -45,11 +46,10 @@ class GPAcq(Policy):
         pass
 
     def get_next(self):
-        # FIXME! Right now this is "implemented" but will return an error, just
-        # so I can instantiate children classes. This NEEDS TO BE FIXED! :) In
-        # particular it should call DIRECT or something once I integrate that
-        # into the code.
-        raise NotImplementedError
+        # FIXME: make solve_direct take a bounds array.
+        objective = lambda x: -self.get_index(x)
+        xmax, _ = solve_direct(objective, self.bounds[:,0], self.bounds[:,1])
+        return xmax
 
     def get_best(self):
         return self.xmax
