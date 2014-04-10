@@ -39,10 +39,20 @@ class GOModel(object):
         return max(fmax - fx, 0.0)
 
 
+def _cleanup(cls):
+    """
+    Decorator to make sure the bounds/xmax properties are correctly sized.
+    """
+    cls.bounds = np.array(cls.bounds, ndmin=2, dtype=float)
+    cls.xmax = np.array(cls.xmax, ndmin=1, dtype=float)
+    return cls
+
+
 # NOTE: for 1d function models we don't really need to worry about the
 # dimensions for f. Maybe I should add a check for this later.
 
 
+@_cleanup
 class Sinusoidal(GOModel):
     """
     Simple sinusoidal function bounded in [0, 2pi] given by cos(x)+sin(3x).
@@ -55,6 +65,7 @@ class Sinusoidal(GOModel):
         return np.ravel(np.cos(x) + np.sin(3*x))
 
 
+@_cleanup
 class Gramacy(GOModel):
     """
     Sinusoidal function in 1d used by Gramacy and Lee in "Cases for the nugget
@@ -68,6 +79,7 @@ class Gramacy(GOModel):
         return np.ravel(np.sin(10*np.pi*x) / (2*x) + (x-1)**4)
 
 
+@_cleanup
 class Branin(GOModel):
     """
     The 2d Branin function bounded in [-5,0] to [10,15]. Global minima exist at
@@ -86,6 +98,7 @@ class Branin(GOModel):
         return y
 
 
+@_cleanup
 class Bohachevsky(GOModel):
     """
     The Bohachevsky function in 2d, bounded in [-100, 100] for both variables.
@@ -102,6 +115,7 @@ class Bohachevsky(GOModel):
         return y
 
 
+@_cleanup
 class Goldstein(GOModel):
     """
     The Goldstein & Price function in 2d, bounded in [-2,-2] to [2,2]. There are

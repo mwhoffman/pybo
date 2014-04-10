@@ -11,8 +11,8 @@ def run_model(Model, sn, ell, sf, T):
     gp = pg.BasicGP(sn, ell, sf)
     policy = pbp.GPUCB(gp, model.bounds)
 
-    xmin = model.bounds[0][0]
-    xmax = model.bounds[0][1]
+    xmin = model.bounds[0,0]
+    xmax = model.bounds[0,1]
     X = np.linspace(xmin, xmax, 200)[:, None]
     x = (xmax-xmin) / 2
 
