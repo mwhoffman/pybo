@@ -14,7 +14,7 @@ def run_model(Model, sn, ell, sf, T):
     xmin = model.bounds[0,0]
     xmax = model.bounds[0,1]
     X = np.linspace(xmin, xmax, 200)[:, None]
-    x = (xmax-xmin) / 2
+    x = (xmax-xmin) / 2 + xmin
 
     for i in xrange(T):
         pg.gpplot(policy.gp, xmin=xmin, xmax=xmax)
