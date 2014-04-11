@@ -9,7 +9,7 @@ import pybo.policies as pbp
 def run_model(Model, sn, ell, sf, T):
     model = Model(0.2)
     gp = pg.BasicGP(sn, ell, sf)
-    policy = pbp.GPUCB(gp, model.bounds)
+    policy = pbp.Thompson(gp, model.bounds)
 
     xmin = model.bounds[0,0]
     xmax = model.bounds[0,1]
