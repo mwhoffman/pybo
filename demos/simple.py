@@ -17,7 +17,8 @@ def run_model(Model, sn, ell, sf, T):
     x = (xmax-xmin) / 2 + xmin
 
     for i in xrange(T):
-        pg.gpplot(policy.gp, xmin=xmin, xmax=xmax)
+        pg.gpplot(policy.gp, xmin=xmin, xmax=xmax, draw=False)
+
         pl.plot(X, policy.get_index(X), lw=2)
         pl.axvline(x, color='r')
         pl.axis('tight')
