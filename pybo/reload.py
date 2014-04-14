@@ -6,6 +6,7 @@
 fnames = """
 pybo.utils.ldsample
 pybo.utils
+pybo.models.gps
 pybo.models.functions
 pybo.models
 pybo.policies._base
