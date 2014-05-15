@@ -32,3 +32,10 @@ class GPModel(object):
         if self.sigma > 0:
             y += np.random.normal(scale=self.sigma)
         return y
+
+    def get_all(self, X):
+        X = np.array(X, ndmin=2, copy=False)
+        y = self.f(X)
+        if self.sigma > 0:
+            y += np.random.normal(scale=self.sigma, size=len(y))
+        return y
