@@ -19,11 +19,17 @@ __all__ = ['GPModel']
 
 class GPModel(object):
     """
-    Model
+    Model representing draws from a zero-mean GP prior with the given kernel.
+    This model is represented using N features sample from the spectral density
+    and in particular by using the same seed (rng) we can use the same sample
+    across different runs or different optimizers.
+
+    NOTE: fixing the rng input will fix the function sampled, but for sigma>0
+    any noisy data will use numpy's global random state.
     """
-    def __init__(self, gp, bounds, sigma=0.0, N=200, rng=None):
+    def __init__(self, bounds, kernel, sigma=0, N=500, rng=None):
         self.bounds = np.array(bounds, dtype=float, ndmin=2)
-        self.f = FourierSample(gp, N, rng)
+        self.f = FourierSample(kernel, N, rng)
         self.sigma = sigma
 
     def get_data(self, x):
