@@ -1,16 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as pl
 
-import pygp as pg
-import pybo.models as pbm
-import pybo.policies as pbp
+import pygp
+import pybo.models
+import pybo.policies
 
 
-def run_model(Policy, Model, sn, sf, ell, T):
-    model = Model(sn)
-    gp = pg.BasicGP(sn, sf, ell)
-    policy = Policy(gp, model.bounds)
-
+def run_model(model, policy, T):
     xmin = model.bounds[0,0]
     xmax = model.bounds[0,1]
     X = np.linspace(xmin, xmax, 200)[:, None]
@@ -24,19 +20,27 @@ def run_model(Policy, Model, sn, sf, ell, T):
         policy.add_data(x, y)
         x = policy.get_next()
 
-        pg.gpplot(policy.gp, xmin=xmin, xmax=xmax, draw=False)
+        pygp.gpplot(policy._gp, xmin=xmin, xmax=xmax, draw=False)
 
-        pl.plot(X, policy.get_index(X), lw=2)
+        pl.plot(X, model.f(X), lw=2, color='c')
+        pl.plot(X, policy._index(X), lw=2)
         pl.axvline(x, color='r')
         pl.axis('tight')
-        pl.axis(ymin=-2.4, ymax=2.4, xmin=xmin, xmax=xmax)
+        pl.axis(ymin=-3.4, ymax=3.4, xmin=xmin, xmax=xmax)
         pl.draw()
 
 
-def run_policy(policy):
-    run_model(pbp.GPUCB, pbm.Gramacy, 0.2, 1.25, 0.05, 100)
-
-
 if __name__ == '__main__':
-    run_policy('gpucb')
+    sn = 0.2
+    sf = 1.25
+    ell = 0.05
+    bounds = [0.5, 2.5]
+    T = 100
 
+    kernel = pygp.kernels.SEARD(sf, ell)
+    model = pybo.models.GPModel(bounds, kernel, sn, rng=0)
+    # model = pybo.models.Gramacy(sn)
+
+    policy = pybo.policies.GPPolicy(model.bounds, sn, sf, ell, 'gppi')
+
+    run_model(model, policy, T)

@@ -10,12 +10,8 @@ pybo.models.gps
 pybo.models.functions
 pybo.models
 pybo.policies._base
-pybo.policies.gpopt._base
-pybo.policies.gpopt.gpei
-pybo.policies.gpopt.gppi
-pybo.policies.gpopt.gpucb
-pybo.policies.gpopt.thompson
-pybo.policies.gpopt
+pybo.policies._direct
+pybo.policies.gppolicy
 pybo.policies
 pybo
 """.split()

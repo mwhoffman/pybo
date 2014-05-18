@@ -1,4 +1,4 @@
-from .gpopt import *
+from .gppolicy import *
 
 __all__ = []
-__all__ += gpopt.__all__
+__all__ += gppolicy.__all__

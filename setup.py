@@ -28,7 +28,7 @@ def setup_package(parent_package='', top_path=None):
         packages=find_packages(),
         zip_safe=False,
         ext_modules=[
-            SimpleExtension('pybo/policies/gpopt/_direct.pyx'),
+            SimpleExtension('pybo/policies/_direct.pyx'),
         ])
 
 
