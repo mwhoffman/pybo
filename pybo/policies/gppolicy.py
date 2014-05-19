@@ -105,9 +105,14 @@ class GPPolicy(Policy):
         self._index = self._acq(self._gp, **self._extra)
 
     def get_next(self):
-        xmax, _ = solve_direct(lambda x: -self._index(x), self._bounds)
-        return xmax
+        if self._gp.ndata == 0:
+            xnext = self._bounds[:,1] - self._bounds[:,0]
+            xnext /= 2
+            xnext += self._bounds[:,0]
+        else:
+            xnext, _ = solve_direct(lambda x: -self._index(x), self._bounds)
+        return xnext
 
     def get_best(self):
-        xmax, _ = gp.xmax()
+        xmax, _ = self._gp.xmax()
         return xmax
