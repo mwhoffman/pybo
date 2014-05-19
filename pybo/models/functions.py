@@ -23,20 +23,23 @@ class GOModel(object):
     of `f` so we can maximize the function.
     """
     def __init__(self, sigma=0.0):
-        self.sigma = sigma
+        self._sigma = sigma
 
-    def get_data(self, x):
-        x = np.array(x, ndmin=2, copy=False)
-        y = -self.f(x)[0]
-        if self.sigma > 0:
-            y += np.random.normal(scale=self.sigma)
+    def __call__(self, x):
+        return self.get(x)[0]
+
+    def get(self, X):
+        y = self.get_f(X)
+        y += np.random.normal(scale=self._sigma, size=len(y)) if (self._sigma > 0) else 0.0
         return y
 
-    def get_regret(self, x):
-        x = np.array(x, ndmin=2, copy=False)
-        xmax = np.array(self.xmax, ndmin=2, copy=False)
-        fx, fmax = -self.f(np.r_[x, xmax])
-        return max(fmax - fx, 0.0)
+    def get_f(self, X):
+        # NOTE: the functions defined in this package are for MINIMIZATION
+        # problems, hence we have to negate them.
+        return -self._f(np.array(X, ndmin=2, copy=False))
+
+    def get_regret(self, X):
+        return np.clip(self.fmax - self.get_f(X), 0.0, np.inf)
 
 
 def _cleanup(cls):
@@ -45,6 +48,7 @@ def _cleanup(cls):
     """
     cls.bounds = np.array(cls.bounds, ndmin=2, dtype=float)
     cls.xmax = np.array(cls.xmax, ndmin=1, dtype=float)
+    cls.fmax = -cls._f(cls.xmax[None,:])[0]
     return cls
 
 
@@ -61,7 +65,7 @@ class Sinusoidal(GOModel):
     xmax = 3.61439678
 
     @staticmethod
-    def f(x):
+    def _f(x):
         return np.ravel(np.cos(x) + np.sin(3*x))
 
 
@@ -75,7 +79,7 @@ class Gramacy(GOModel):
     xmax = 0.54856343
 
     @staticmethod
-    def f(x):
+    def _f(x):
         return np.ravel(np.sin(10*np.pi*x) / (2*x) + (x-1)**4)
 
 
@@ -90,7 +94,7 @@ class Branin(GOModel):
     xmax = [np.pi, 2.275]
 
     @staticmethod
-    def f(x):
+    def _f(x):
         y = (x[:,1]-(5.1/(4*np.pi**2))*x[:,0]**2+5*x[:,0]/np.pi-6)**2
         y += 10*(1-1/(8*np.pi))*np.cos(x[:,0])+10
         ## NOTE: this rescales branin by 10 to make it more manageable.
@@ -108,7 +112,7 @@ class Bohachevsky(GOModel):
     xmax = [0, 0]
 
     @staticmethod
-    def f(x):
+    def _f(x):
         y = 0.7 + x[:,0]**2 + 2.0*x[:,1]**2
         y -= 0.3*np.cos(3*np.pi*x[:,0])
         y -= 0.4*np.cos(4*np.pi*x[:,1])
@@ -125,7 +129,7 @@ class Goldstein(GOModel):
     xmax = [0, -1]
 
     @staticmethod
-    def f(x):
+    def _f(x):
         a = 1+(x[:,0] + x[:,1]+1)**2 * \
             (19-14*x[:,0] +
              3*x[:,0]**2 - 14*x[:,1] + 6*x[:,0]*x[:,1] + 3*x[:,1]**2)

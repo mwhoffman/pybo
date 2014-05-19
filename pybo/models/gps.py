@@ -29,19 +29,16 @@ class GPModel(object):
     """
     def __init__(self, bounds, kernel, sigma=0, N=500, rng=None):
         self.bounds = np.array(bounds, dtype=float, ndmin=2)
-        self.f = FourierSample(kernel, N, rng)
-        self.sigma = sigma
+        self._f = FourierSample(kernel, N, rng)
+        self._sigma = sigma
 
-    def get_data(self, x):
-        x = np.array(x, ndmin=2, copy=False)
-        y = self.f(x)[0]
-        if self.sigma > 0:
-            y += np.random.normal(scale=self.sigma)
+    def __call__(self, x):
+        return self.get(x)[0]
+
+    def get(self, X):
+        y = self.get_f(X)
+        y += np.random.normal(scale=self._sigma, size=len(y)) if (self._sigma > 0) else 0.0
         return y
 
-    def get_all(self, X):
-        X = np.array(X, ndmin=2, copy=False)
-        y = self.f(X)
-        if self.sigma > 0:
-            y += np.random.normal(scale=self.sigma, size=len(y))
-        return y
+    def get_f(self, X):
+        return self._f(np.array(X, ndmin=2, copy=False))
