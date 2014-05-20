@@ -16,13 +16,13 @@ def run_model(model, policy, T):
     pl.show()
 
     for i in xrange(T):
-        y = model.get_data(x)
+        y = model(x)
         policy.add_data(x, y)
         x = policy.get_next()
 
         pygp.gpplot(policy._gp, xmin=xmin, xmax=xmax, draw=False)
 
-        pl.plot(X, model.f(X), lw=2, color='c')
+        pl.plot(X, model.get_f(X), lw=2, color='c')
         pl.plot(X, policy._index(X), lw=2)
         pl.axvline(x, color='r')
         pl.axis('tight')
@@ -38,8 +38,7 @@ if __name__ == '__main__':
     T = 100
 
     kernel = pygp.kernels.SEARD(sf, ell)
-    model = pybo.models.GPModel(bounds, kernel, sn, rng=0)
-    # model = pybo.models.Gramacy(sn)
+    model = pybo.models.Gramacy(sn)
 
     policy = pybo.policies.GPPolicy(model.bounds, sn, sf, ell, 'gppi')
 
