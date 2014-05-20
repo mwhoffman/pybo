@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as pl
 
 import pybo.models
-import pygp
+import pybo.policies
 
 
 def run_optimization(model, policy, T):

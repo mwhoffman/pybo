@@ -1,3 +1,5 @@
+/pybo.egg-info/
 /build/
+/dist/
 *.c
 *.so
