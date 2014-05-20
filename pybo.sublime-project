@@ -4,6 +4,9 @@
 		{
 			"path": ".",
             "folder_exclude_patterns": [
+                "pygp.egg-info",
+                "build",
+                "dist"
             ],
             "file_exclude_patterns": [
                 "pybo/policies/_direct.c"
