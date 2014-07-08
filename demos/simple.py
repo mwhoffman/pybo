@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as pl
 
 import pygp
+import pygp.plotting
 import pybo.models
 import pybo.policies
 
@@ -20,7 +21,7 @@ def run_model(model, policy, T):
         policy.add_data(x, y)
         x = policy.get_next()
 
-        pygp.gpplot(policy._gp, xmin=xmin, xmax=xmax, draw=False)
+        pygp.plotting.gpplot(policy._gp, xmin=xmin, xmax=xmax, mean=False, draw=False)
 
         pl.plot(X, model.get_f(X), lw=2, color='c')
         pl.plot(X, policy._index(X), lw=2)
@@ -37,9 +38,7 @@ if __name__ == '__main__':
     bounds = [0.5, 2.5]
     T = 100
 
-    kernel = pygp.kernels.SEARD(sf, ell)
     model = pybo.models.Gramacy(sn)
-
-    policy = pybo.policies.GPPolicy(model.bounds, sn, sf, ell, 'gppi')
+    policy = pybo.policies.GPPolicy(model.bounds, sn, sf, ell, 'gpucb')
 
     run_model(model, policy, T)

@@ -44,7 +44,7 @@ def _register(f):
 
 @_register
 def gpei(gp, xi=0.0):
-    fmax = gp.xmax()[1] if (gp.ndata > 0) else 0
+    fmax = gp.get_max()[1] if (gp.ndata > 0) else 0
     def index(X):
         mu, s2 = gp.posterior(X)
         s = np.sqrt(s2, out=s2)
@@ -56,7 +56,7 @@ def gpei(gp, xi=0.0):
 
 @_register
 def gppi(gp, xi=0.05):
-    fmax = gp.xmax()[1] if (gp.ndata > 0) else 0
+    fmax = gp.get_max()[1] if (gp.ndata > 0) else 0
     def index(X):
         mu, s2 = gp.posterior(X)
         mu -= fmax + xi
@@ -114,5 +114,5 @@ class GPPolicy(Policy):
         return xnext
 
     def get_best(self):
-        xmax, _ = self._gp.xmax()
+        xmax, _ = self._gp.get_max()
         return xmax
