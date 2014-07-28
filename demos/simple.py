@@ -43,6 +43,6 @@ if __name__ == '__main__':
     T = 100
 
     model = pybo.models.Sinusoidal(0.2)
-    policy = pybo.policies.GPPolicy(model.bounds, acq='gpucb')
+    policy = pybo.policies.GPPolicy(model.bounds, policy='ei')
 
     run_model(model, policy, T)

@@ -11,6 +11,7 @@ pybo.models.functions
 pybo.models
 pybo.policies._base
 pybo.policies._direct
+pybo.policies.gpacquisition
 pybo.policies.gppolicy
 pybo.policies
 pybo
