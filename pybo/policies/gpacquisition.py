@@ -21,7 +21,10 @@ def _integrate(models, index):
     if hasattr(models, '__iter__'):
         def index2(X, grad=False):
             indices = [index(model, X, grad) for model in models]
-            return indices
+            if grad:
+                return tuple([np.sum(_, axis=0) for _ in zip(*indices)])
+            else:
+                return np.sum(indices, axis=0)
     else:
         def index2(X, grad=False):
             return index(models, X, grad)
@@ -49,11 +52,14 @@ def ei(models, fbest, xi=0.0):
         ei = d * cdfz + s * pdfz
 
         if grad:
-            # get the derivative of ei.
+            # get the derivative of ei. The mu/s2/etc. components are vectors
+            # collecting n scalar points, whereas dmu and ds2 are (n,d)-arrays.
+            # The indexing tricks just interpret the "scalar" quantities as
+            # (n,1)-arrays so that we can use numpy's broadcasting rules.
             dmu, ds2 = posterior[2:]
-            dei = 0.5 * ds2 / s2
-            dei *= ei - s * z * cdfz
-            dei += cdfz * dmu
+            dei = 0.5 * ds2 / s2[:,None]
+            dei *= (ei - s * z * cdfz)[:,None]
+            dei += cdfz[:,None] * dmu
             return ei, dei
         else:
             return ei
