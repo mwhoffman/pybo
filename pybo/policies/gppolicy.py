@@ -17,7 +17,7 @@ import pygp
 # local imports
 from ._base import Policy
 from ._direct import solve_direct
-from . import gpacquisition
+from ..policies import gpacquisition
 
 # exported symbols
 __all__ = ['GPPolicy']
