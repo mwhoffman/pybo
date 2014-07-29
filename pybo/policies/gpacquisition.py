@@ -20,14 +20,14 @@ __all__ = ['ei']
 def _integrate(models, index):
     if hasattr(models, '__iter__'):
         def index2(X, grad=False):
-            indices = [index(model, X, grad) for model in models]
+            indices = [index(model, grad, X) for model in models]
             if grad:
                 return tuple([np.sum(_, axis=0) for _ in zip(*indices)])
             else:
                 return np.sum(indices, axis=0)
     else:
         def index2(X, grad=False):
-            return index(models, X, grad)
+            return index(models, grad, X)
     return index2
 
 
@@ -41,7 +41,7 @@ def ei(models, fbest, xi=0.0):
 
     # define the index wrt a single model (that should act like a GP model, ie
     # in that it is marginally Gaussian and defines the posterior method).
-    def index(model, X, grad=False):
+    def index(model, grad, X):
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
