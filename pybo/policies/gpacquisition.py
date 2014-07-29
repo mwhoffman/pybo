@@ -10,37 +10,36 @@ from __future__ import print_function
 # global imports
 import numpy as np
 import scipy.stats as ss
+import functools
+import operator
 
 # exported symbols
-__all__ = ['ei', 'pi', 'ucb', 'thompson']
+__all__ = ['ei']
 
 
-def ei(gp, xi=0.0, target=None):
-    # target is used instead of fmax + xi whenever the highest possible value
-    # is known.
+def _integrate(models, index):
+    if hasattr(models, '__iter__'):
+        def index2(X, grad=False):
+            indices = [index(model, X, grad) for model in models]
+            return indices
+    else:
+        def index2(X, grad=False):
+            return index(models, X, grad)
+    return index2
 
-    # TODO -- Bobak: The following code snippet will be copied in pi as well.
-    #   Is there a way to maybe consolidate code here, or is it not worth it?
 
-    # if gp is a list, call this function recursively on each element
-    if hasattr(gp, '__iter__'):
-        indices = [ei(gpi, xi=xi, target=target) for gpi in gp]
-        def index(x, grad=False, negate=False):
-            uix = [ui(x, grad, negate) for ui in indices]
-            if grad:
-                ei, gradient = zip(*uix)
-                return np.mean(ei, 0), np.mean(gradient, 0)
-            return np.mean(uix, 0)
-        return index
+def ei(models, fbest, xi=0.0):
+    # FIXME (Matt): Before Bobak had added a target value that was either given
+    # by `fbest + xi` or was given by the target. This allows us to enter a
+    # 'max' value, but I'm not sure that's right. IE: doesn't that mean we're
+    # trying to compute the expected improvement over the max? Which should be
+    # zero? I took this out because it deserves more thought.
+    target = fbest + xi
 
-    # to do on each gp that is passed
-    fmax = gp.get_max()[1] if (gp.ndata > 0) else 0
-    # NOTE -- Bobak: I think the following is a nice way to unify xi and a
-    #   potentially known target.
-    target = target if target else fmax + xi
-
-    def index(X, grad=False, negate=False):
-        posterior = gp.posterior(X, grad=grad)
+    # define the index wrt a single model (that should act like a GP model, ie
+    # in that it is marginally Gaussian and defines the posterior method).
+    def index(model, X, grad=False):
+        posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
         d = mu - target
@@ -49,24 +48,24 @@ def ei(gp, xi=0.0, target=None):
         cdfz = ss.norm.cdf(z)
         ei = d * cdfz + s * pdfz
 
-        if not grad:
-            return -ei if negate else ei
+        if grad:
+            # get the derivative of ei.
+            dmu, ds2 = posterior[2:]
+            dei = 0.5 * ds2 / s2
+            dei *= ei - s * z * cdfz
+            dei += cdfz * dmu
+            return ei, dei
+        else:
+            return ei
 
-        dmu, ds2 = posterior[2:]
-
-        gradient = 0.5 * ds2 / s2
-        gradient *= ei - s * z * cdfz
-        gradient += cdfz * dmu
-
-        # return ei and grad
-        return -ei, -np.array(gradient, ndmin=1) if negate else \
-               ei, np.array(gradient, ndmin=1)
-
-    return index
+    return _integrate(models, index)
 
 
-def pi(gp, xi=0.05):
-    pass
+# FIXME: just comment out the other acquisition functions for now. NOTE that
+# they've also been removed from __all__.
+
+
+# def pi(gp, xi=0.05):
 #     fmax = gp.get_max()[1] if (gp.ndata > 0) else 0
 #     def index(X):
 #         mu, s2 = gp.posterior(X)
@@ -74,10 +73,9 @@ def pi(gp, xi=0.05):
 #         mu /= np.sqrt(s2, out=s2)
 #         return mu
 #     return index
-#
-#
-def ucb(gp, delta=0.1, xi=0.2):
-    pass
+
+
+# def ucb(gp, delta=0.1, xi=0.2):
 #     d = gp._kernel.ndim
 #     a = xi*2*np.log(np.pi**2 / 3 / delta)
 #     b = xi*(4+d)
@@ -86,8 +84,7 @@ def ucb(gp, delta=0.1, xi=0.2):
 #         beta = a + b * np.log(gp.ndata+1)
 #         return mu + np.sqrt(beta*s2)
 #     return index
-#
-#
-def thompson(gp, nfeatures=250):
-    pass
+
+
+# def thompson(gp, nfeatures=250):
 #     return fourier.FourierSample(gp, nfeatures)

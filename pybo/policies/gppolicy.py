@@ -29,7 +29,7 @@ __all__ = ['GPPolicy']
 
 POLICIES = dict((f, getattr(gpacquisition, f)) for f in gpacquisition.__all__)
 SOLVERS = dict(direct=solve_direct)
-MARGINALS = dict(fixed=lambda gp: gp)
+INFERENCE = dict(fixed=lambda gp: gp)
 
 
 #===============================================================================
@@ -38,35 +38,47 @@ MARGINALS = dict(fixed=lambda gp: gp)
 class GPPolicy(Policy):
     def __init__(self,
                  bounds,
-                 kernel='Matern',
+                 noise=None,
+                 kernel='Matern3',
                  solver='direct',
                  policy='ei',
-                 marginal='fixed'):
+                 inference='fixed'):
 
         # initialize the bounds and grab the function objects that will be used
         # as part of the meta policy.
         self._bounds = np.array(bounds, dtype=float, ndmin=2)
         self._solver = SOLVERS[solver]
         self._policy = POLICIES[policy]
-        self._marginal = MARGINALS[marginal]
+        self._inference = INFERENCE[inference]
 
-        # FIXME: do something here for specifying sane initial hyperparameters.
-        sn = 0.5
-        sf = 1.0
-        ell = (self._bounds[:,1] - self._bounds[:,0]) / 10
+        # initialize the GP.
+        if isinstance(kernel, pygp.kernels._base.Kernel):
+            # FIXME: this should be generalized at some point to more general
+            # likelihood models.
+            sn = 0.5 if (noise is None) else noise
+            likelihood = pygp.likelihoods.Gaussian(sn)
+            self._gp = pygp.inference.ExactGP(likelihood, kernel)
 
-        # FIXME: sane priors?
-        self._prior = dict(
-            sn =pygp.priors.Uniform(0.01,  1.0),
-            sf =pygp.priors.Uniform(0.01, 10.0),
-            ell=pygp.priors.Uniform(0.01,  1.0))
-
-        # initialize the "model"
-        self._gp = pygp.BasicGP(sn, sf, ell)
+        else:
+            # come up with some sane initial hyperparameters.
+            sn = 0.5 if (noise is None) else noise
+            sf = 1.0
+            ell = (self._bounds[:,1] - self._bounds[:,0]) / 10
+            self._gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
 
     def add_data(self, x, y):
         self._gp.add_data(x, y)
-        self._index = self._policy(self._marginal(self._gp))
+        self._marginal = self._inference(self._gp)
+
+        if isinstance(self._marginal, list):
+            f = np.mean([gp.posterior(gp._X)[0] for gp in self._marginal], axis=0)
+        else:
+            f = self._gp.posterior(self._gp._X)[0]
+
+        j = f.argmax()
+        self._fbest = f[j]
+        self._xbest = self._gp._X[j]
+        self._index = self._policy(self._marginal, self._fbest)
 
     def get_next(self):
         if self._gp.ndata == 0:
@@ -78,5 +90,4 @@ class GPPolicy(Policy):
         return xnext
 
     def get_best(self):
-        xmax, _ = self._gp.get_max()
-        return xmax
+        return self._xbest
