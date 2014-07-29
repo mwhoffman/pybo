@@ -10,11 +10,11 @@ from __future__ import print_function
 # global imports
 import numpy as np
 
-# local imports
-from pygp.extra.fourier import FourierSample
-
 # exported symbols
 __all__ = ['GPModel']
+
+
+# FIXME: GPModel is broken now. needs to be fixed.
 
 
 class GPModel(object):
