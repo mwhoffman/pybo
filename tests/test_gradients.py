@@ -19,17 +19,16 @@ def test_ei_gradients():
         policy.add_data(x, y)
         x = policy.get_next()
 
-    index = ei(policy._gp)
-
     # get some test points
     xtest = rng.rand(20) * (xmax - xmin) + xmin
+    xtest = xtest[None].T
 
     # compute gradients analytically
-    _, dei = index(xtest[None])
+    _, dei = policy._index(xtest, grad=True)
 
     # define functions to feed into approx_fprime. These take a single point so
     # we have to use the None-index to "vectorize" it.
-    fei = lambda x: index(x[None], grad=False)[0]
+    fei = lambda x: policy._index(x[None], grad=False)
     # numerical approximation of gradients
     dei_ = np.array([spop.approx_fprime(xk, fei, 1e-8) for xk in xtest])
 
