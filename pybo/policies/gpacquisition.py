@@ -87,14 +87,17 @@ def pi(models, fbest, xi=0.05):
             dz = dmu / s[:, None] - 0.5 * ds2 * z[:, None] / s2[:, None]
             pdfz = ss.norm.pdf(z)
 
-            return cdfz, dz * pdfz
+            return cdfz, dz * pdfz[:, None]
         else:
             return cdfz
 
     return _integrate(models, index)
 
 
-def ucb(models, delta=0.1, xi=0.2):
+def ucb(models, fbest, delta=0.1, xi=0.2):
+    # FIXME -- Bobak: fbest is ignored in this function but is passed by
+    # GPPolicy because at the moment it passes (models, fbest) to all
+    # policies.
     d = models._kernel.ndim
     a = xi * 2 * np.log(np.pi**2 / 3 / delta)
     b = xi * (4 + d)
@@ -105,7 +108,7 @@ def ucb(models, delta=0.1, xi=0.2):
         beta = a + b * np.log(model.ndata + 1)
         if grad:
             dmu, ds2 = posterior[2:]
-            return mu + np.sqrt(beta * s2), dmu + np.sqrt(beta * ds2)
+            return mu + np.sqrt(beta * s2), dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2
         else:
             return mu + np.sqrt(beta * s2)
     return _integrate(models, index)

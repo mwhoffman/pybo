@@ -78,6 +78,9 @@ class GPPolicy(Policy):
         j = f.argmax()
         self._fbest = f[j]
         self._xbest = self._gp._X[j]
+        # FIXME -- Bobak: The following line does not apply to most policies
+        # and forces us to have all policies take fbest. Is this really
+        # desired?
         self._index = self._policy(self._marginal, self._fbest)
 
     def get_next(self):
