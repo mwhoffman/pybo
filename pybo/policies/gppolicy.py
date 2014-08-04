@@ -17,7 +17,10 @@ import pygp
 # local imports
 from ._base import Policy
 from ._direct import solve_direct
+
+# these submodules define the different parts that make up the "meta" strategy.
 from . import gpacquisition
+from . import gpinference
 
 # exported symbols
 __all__ = ['GPPolicy']
@@ -27,9 +30,12 @@ __all__ = ['GPPolicy']
 # define dictionaries containing functions that can be used for various parts of
 # the meta policy
 
-POLICIES = dict((f, getattr(gpacquisition, f)) for f in gpacquisition.__all__)
+def _make_dict(module):
+    return dict((f, getattr(module, f)) for f in module.__all__)
+
+INFERENCE = _make_dict(gpinference)
+POLICIES  = _make_dict(gpacquisition)
 SOLVERS = dict(direct=solve_direct)
-INFERENCE = dict(fixed=lambda gp: gp)
 
 
 #===============================================================================
@@ -51,24 +57,15 @@ class GPPolicy(Policy):
         self._policy = POLICIES[policy]
         self._inference = INFERENCE[inference]
 
-        # initialize the GP.
-        if isinstance(kernel, pygp.kernels._base.Kernel):
-            # FIXME: this should be generalized at some point to more general
-            # likelihood models.
-            sn = 0.5 if (noise is None) else noise
-            likelihood = pygp.likelihoods.Gaussian(sn)
-            self._gp = pygp.inference.ExactGP(likelihood, kernel)
-
-        else:
-            # come up with some sane initial hyperparameters.
-            sn = 0.5 if (noise is None) else noise
-            sf = 1.0
-            ell = (self._bounds[:,1] - self._bounds[:,0]) / 10
-            self._gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
+        # come up with some sane initial hyperparameters.
+        sn = 0.5 if (noise is None) else noise
+        sf = 1.0
+        ell = (self._bounds[:,1] - self._bounds[:,0]) / 10
+        self._gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
 
     def add_data(self, x, y):
         self._gp.add_data(x, y)
-        self._marginal = self._inference(self._gp)
+        self._marginal = self._inference(self._gp, None)
         self._index = self._policy(self._marginal)
 
     def get_next(self):

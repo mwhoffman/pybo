@@ -24,7 +24,9 @@ def run_model(model, policy, T):
 
         pl.clf()
         pl.plot(X, model.get_f(X), 'k--', lw=2, zorder=1)
-        pl.plot(X, policy._index(X), lw=2, zorder=2)
+        index = np.log(policy._index(X))
+        index -= np.max(index)
+        pl.plot(X, index, lw=2, zorder=2)
         pl.scatter(policy._gp._X, policy._gp._y, color='m', zorder=2)
         pl.axvline(x, color='r', zorder=3)
         pl.axis('tight')
@@ -42,7 +44,8 @@ if __name__ == '__main__':
     # bounds = [0.5, 2.5]
     T = 100
 
-    model = pybo.models.Sinusoidal(0.2)
-    policy = pybo.policies.GPPolicy(model.bounds, noise=0.2, policy='ei')
+    sigma = 0.05
+    model = pybo.models.Sinusoidal(sigma)
+    policy = pybo.policies.GPPolicy(model.bounds, noise=sigma, policy='ei')
 
     run_model(model, policy, T)

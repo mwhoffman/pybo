@@ -32,13 +32,13 @@ def _integrate(models, index):
 
 
 def _get_best(models):
-        if not isinstance(models, list):
-            models = [models]
-        f = np.mean([gp.posterior(gp._X)[0] for gp in models], axis=0)
-        j = f.argmax()
-        fbest = f[j]
-        xbest = models[0]._X[j]
-        return fbest, xbest
+    if not isinstance(models, list):
+        models = [models]
+    f = np.mean([gp.posterior(gp._X)[0] for gp in models], axis=0)
+    j = f.argmax()
+    fbest = f[j]
+    xbest = models[0]._X[j]
+    return fbest, xbest
 
 
 def ei(models, xi=0.0):
