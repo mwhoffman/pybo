@@ -31,12 +31,18 @@ def _integrate(models, index):
     return index2
 
 
-def ei(models, fbest, xi=0.0):
-    # FIXME (Matt): Before Bobak had added a target value that was either given
-    # by `fbest + xi` or was given by the target. This allows us to enter a
-    # 'max' value, but I'm not sure that's right. IE: doesn't that mean we're
-    # trying to compute the expected improvement over the max? Which should be
-    # zero? I took this out because it deserves more thought.
+def _get_best(models):
+        if not isinstance(models, list):
+            models = [models]
+        f = np.mean([gp.posterior(gp._X)[0] for gp in models], axis=0)
+        j = f.argmax()
+        fbest = f[j]
+        xbest = models[0]._X[j]
+        return fbest, xbest
+
+
+def ei(models, xi=0.0):
+    fbest = _get_best(models)[0]
     target = fbest + xi
 
     # define the index wrt a single model (that should act like a GP model, ie
@@ -67,7 +73,8 @@ def ei(models, fbest, xi=0.0):
     return _integrate(models, index)
 
 
-def pi(models, fbest, xi=0.05):
+def pi(models, xi=0.05):
+    fbest = _get_best(models)[0]
     target = fbest + xi
 
     def index(model, grad, X):
@@ -94,15 +101,12 @@ def pi(models, fbest, xi=0.05):
     return _integrate(models, index)
 
 
-def ucb(models, fbest, delta=0.1, xi=0.2):
-    # FIXME -- Bobak: fbest is ignored in this function but is passed by
-    # GPPolicy because at the moment it passes (models, fbest) to all
-    # policies.
-    d = models._kernel.ndim
-    a = xi * 2 * np.log(np.pi**2 / 3 / delta)
-    b = xi * (4 + d)
-
+def ucb(models, delta=0.1, xi=0.2):
     def index(model, grad, X):
+        d = model._kernel.ndim
+        a = xi * 2 * np.log(np.pi**2 / 3 / delta)
+        b = xi * (4 + d)
+
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         beta = a + b * np.log(model.ndata + 1)
@@ -111,6 +115,9 @@ def ucb(models, fbest, delta=0.1, xi=0.2):
             return mu + np.sqrt(beta * s2), dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2
         else:
             return mu + np.sqrt(beta * s2)
+
+    # FIXME: while this can be implemented, it is not correct in that it does
+    # not form a true UCB when integrating over the hyperparameters.
     return _integrate(models, index)
 
 

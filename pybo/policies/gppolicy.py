@@ -17,7 +17,7 @@ import pygp
 # local imports
 from ._base import Policy
 from ._direct import solve_direct
-from ..policies import gpacquisition
+from . import gpacquisition
 
 # exported symbols
 __all__ = ['GPPolicy']
@@ -69,19 +69,7 @@ class GPPolicy(Policy):
     def add_data(self, x, y):
         self._gp.add_data(x, y)
         self._marginal = self._inference(self._gp)
-
-        if isinstance(self._marginal, list):
-            f = np.mean([gp.posterior(gp._X)[0] for gp in self._marginal], axis=0)
-        else:
-            f = self._gp.posterior(self._gp._X)[0]
-
-        j = f.argmax()
-        self._fbest = f[j]
-        self._xbest = self._gp._X[j]
-        # FIXME -- Bobak: The following line does not apply to most policies
-        # and forces us to have all policies take fbest. Is this really
-        # desired?
-        self._index = self._policy(self._marginal, self._fbest)
+        self._index = self._policy(self._marginal)
 
     def get_next(self):
         if self._gp.ndata == 0:
@@ -93,4 +81,4 @@ class GPPolicy(Policy):
         return xnext
 
     def get_best(self):
-        return self._xbest
+        return gpacquisition._get_best(self._marginal)[1]
