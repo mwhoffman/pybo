@@ -86,11 +86,11 @@ class Gramacy(GOModel):
 @_cleanup
 class Branin(GOModel):
     """
-    The 2d Branin function bounded in [-5,0] to [10,15]. Global minima exist at
+    The 2d Branin function bounded in [-5,10] to [0,15]. Global minima exist at
     [-pi, 12.275], [pi, 2.275], and [9.42478, 2.475], with no local minima. The
     minimal function value is 0.397887.
     """
-    bounds = [[-5, 0], [10, 15]]
+    bounds = [[-5, 10], [0, 15]]
     xmax = [np.pi, 2.275]
 
     @staticmethod

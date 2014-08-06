@@ -17,6 +17,7 @@ import pygp
 # local imports
 from ._base import Policy
 from ._direct import solve_direct
+from ..utils.indexopt import global_solve
 from ..policies import gpacquisition
 
 # exported symbols
@@ -28,7 +29,7 @@ __all__ = ['GPPolicy']
 # the meta policy
 
 POLICIES = dict((f, getattr(gpacquisition, f)) for f in gpacquisition.__all__)
-SOLVERS = dict(direct=solve_direct)
+SOLVERS = dict(direct=solve_direct, lbfgsb=global_solve)
 INFERENCE = dict(fixed=lambda gp: gp)
 
 
@@ -89,7 +90,10 @@ class GPPolicy(Policy):
             xnext /= 2
             xnext += self._bounds[:,0]
         else:
-            xnext, _ = self._solver(lambda x: -self._index(x), self._bounds)
+            def negated_index(x, grad=False):
+                fg = self._index(x, grad=grad)
+                return (-fg[0], -fg[1]) if grad else -fg
+            xnext, _ = self._solver(negated_index, self._bounds)
         return xnext
 
     def get_best(self):

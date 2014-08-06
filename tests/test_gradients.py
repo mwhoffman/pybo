@@ -4,7 +4,6 @@ import scipy.optimize as spop
 
 import pybo.models
 import pybo.policies
-from pybo.policies.gpacquisition import ei
 
 def test_gradients():
     rng = np.random.RandomState(0)
