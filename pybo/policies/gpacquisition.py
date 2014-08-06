@@ -20,6 +20,7 @@ __all__ = ['ei', 'pi', 'ucb']
 def _integrate(models, index):
     if hasattr(models, '__iter__'):
         def index2(X, grad=False):
+            X = np.array(X, ndmin=2)    # necessary for kernel computation
             indices = [index(model, grad, X) for model in models]
             if grad:
                 return tuple([np.sum(_, axis=0) for _ in zip(*indices)])
@@ -27,6 +28,7 @@ def _integrate(models, index):
                 return np.sum(indices, axis=0)
     else:
         def index2(X, grad=False):
+            X = np.array(X, ndmin=2)    # necessary for kernel computation
             return index(models, grad, X)
     return index2
 
@@ -42,6 +44,7 @@ def ei(models, fbest, xi=0.0):
     # define the index wrt a single model (that should act like a GP model, ie
     # in that it is marginally Gaussian and defines the posterior method).
     def index(model, grad, X):
+        ntest, ndim = X.shape
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
@@ -60,6 +63,11 @@ def ei(models, fbest, xi=0.0):
             dei = 0.5 * ds2 / s2[:,None]
             dei *= (ei - s * z * cdfz)[:,None]
             dei += cdfz[:,None] * dmu
+            if ntest == 1:
+                # this clause is needed to make sure if a single test point is
+                # passed, then a (ndmin,)-array is returned as a gradient.
+                # (instead of a (1, ndmin)-array which breaks fmin_l_bfgs_b.)
+                dei = np.squeeze(dei, axis=0)
             return ei, dei
         else:
             return ei
@@ -71,6 +79,7 @@ def pi(models, fbest, xi=0.05):
     target = fbest + xi
 
     def index(model, grad, X):
+        ntest, ndim = X.shape
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
@@ -86,8 +95,14 @@ def pi(models, fbest, xi=0.05):
             dmu, ds2 = posterior[2:]
             dz = dmu / s[:, None] - 0.5 * ds2 * z[:, None] / s2[:, None]
             pdfz = ss.norm.pdf(z)
+            dpi = dz * pdfz[:, None]
+            if ntest == 1:
+                # this clause is needed to make sure if a single test point is
+                # passed, then a (ndmin,)-array is returned as a gradient.
+                # (instead of a (1, ndmin)-array which breaks fmin_l_bfgs_b.)
+                dpi = np.squeeze(dpi, axis=0)
 
-            return cdfz, dz * pdfz[:, None]
+            return cdfz, dpi
         else:
             return cdfz
 
@@ -103,12 +118,19 @@ def ucb(models, fbest, delta=0.1, xi=0.2):
     b = xi * (4 + d)
 
     def index(model, grad, X):
+        ntest, ndim = X.shape
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         beta = a + b * np.log(model.ndata + 1)
         if grad:
             dmu, ds2 = posterior[2:]
-            return mu + np.sqrt(beta * s2), dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2
+            ducb = dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2
+            if ntest == 1:
+                # this clause is needed to make sure if a single test point is
+                # passed, then a (ndmin,)-array is returned as a gradient.
+                # (instead of a (1, ndmin)-array which breaks fmin_l_bfgs_b.)
+                ducb = np.squeeze(ducb, axis=0)
+            return mu + np.sqrt(beta * s2), ducb
         else:
             return mu + np.sqrt(beta * s2)
     return _integrate(models, index)

@@ -48,19 +48,19 @@ def test_global_solve_direct():
     rng = np.random.RandomState(0)
     model = pybo.models.Branin()
     policy_direct = pybo.policies.GPPolicy(model.bounds, policy='ei')
-    #policy_lbfgsb = pybo.policies.GPPolicy(model.bounds, policy='ei', solver='lbfgsb')
+    policy_lbfgsb = pybo.policies.GPPolicy(model.bounds, policy='ei', solver='lbfgsb')
 
     xmin = model.bounds[:, 0]
     xmax = model.bounds[:, 1]
     x = (xmax - xmin) / 2 + xmin
-    for t in xrange(2):
+    for t in xrange(4):
         y = model(x)
         policy_direct.add_data(x, y)
-        #policy_lbfgsb.add_data(x, y)
+        policy_lbfgsb.add_data(x, y)
         x = policy_direct.get_next()
 
     # make sure everything is close to within tolerance
-    #nt.assert_allclose(x, policy_lbfgsb.get_next(), rtol=1e-6, atol=1e-6)
+    nt.assert_allclose(x, policy_lbfgsb.get_next(), rtol=1e-6, atol=1e-6)
 
 if __name__ == '__main__':
     test_global_solve_direct()
