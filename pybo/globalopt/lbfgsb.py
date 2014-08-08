@@ -6,7 +6,7 @@ import scipy.optimize
 __all__ = ['solve_lbfgsb']
 
 
-def solve_lbfgsb(func_grad, bounds, ngrid=10000, nbest=10, args=()):
+def solve_lbfgsb(func_grad, bounds, ngrid=10000, nbest=10, max=False):
     """
     Compute func on a grid, pick nbest points, and LBFGS from there.
 
@@ -31,13 +31,16 @@ def solve_lbfgsb(func_grad, bounds, ngrid=10000, nbest=10, args=()):
 
     # compute func_grad on points xx
     ff = func_grad(xx, grad=False)
-    idx_sorted = np.argsort(ff)
+    idx_sorted = np.argsort(ff) if (not max) else np.argsort(ff)[::-1]
 
     # lbfgsb needs the gradient to be "contiguous", squeezing the gradient
     # protects against func_grads that return ndmin=2 arrays
     def func_grad_(x):
         f, g = func_grad(x[None, :], grad=True)
+        if max:
+            return -f, -np.squeeze(g)
         return f, np.squeeze(g)
+
     # TODO: the following can easily be multiprocessed
     result = [scipy.optimize.fmin_l_bfgs_b(func_grad_, x0, bounds=bounds)
               for x0 in xx[idx_sorted[:nbest]]]
@@ -49,4 +52,6 @@ def solve_lbfgsb(func_grad, bounds, ngrid=10000, nbest=10, args=()):
             xmin = res[0]
             fmin = res[1]
 
+    if max:
+        return xmin, -fmin
     return xmin, fmin

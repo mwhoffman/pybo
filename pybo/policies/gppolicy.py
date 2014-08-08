@@ -90,10 +90,7 @@ class GPPolicy(Policy):
             xnext /= 2
             xnext += self._bounds[:,0]
         else:
-            def negated_index(x, grad=False):
-                fg = self._index(x, grad=grad)
-                return (-fg[0], -fg[1]) if grad else -fg
-            xnext, _ = self._solver(negated_index, self._bounds)
+            xnext, _ = self._solver(self._index, self._bounds, max=True)
         return xnext
 
     def get_best(self):
