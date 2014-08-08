@@ -33,12 +33,13 @@ def solve_lbfgsb(func_grad, bounds, ngrid=10000, nbest=10, args=()):
     ff = func_grad(xx, grad=False)
     idx_sorted = np.argsort(ff)
 
-    args = list(args) + ['grad=True']
+    # lbfgsb needs the gradient to be "contiguous", squeezing the gradient
+    # protects against func_grads that return ndmin=2 arrays
+    def func_grad_(x):
+        f, g = func_grad(x[None, :], grad=True)
+        return f, np.squeeze(g)
     # TODO: the following can easily be multiprocessed
-    result = [scipy.optimize.fmin_l_bfgs_b(
-                  func_grad, x0,
-                  bounds=bounds,
-                  args=args)
+    result = [scipy.optimize.fmin_l_bfgs_b(func_grad_, x0, bounds=bounds)
               for x0 in xx[idx_sorted[:nbest]]]
 
     xmin = None
