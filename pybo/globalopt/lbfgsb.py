@@ -2,7 +2,11 @@ from __future__ import division
 import numpy as np
 import scipy.optimize
 
-def global_solve(func_grad, bounds, ngrid=10000, nbest=10, args=()):
+
+__all__ = ['solve_lbfgsb']
+
+
+def solve_lbfgsb(func_grad, bounds, ngrid=10000, nbest=10, args=()):
     """
     Compute func on a grid, pick nbest points, and LBFGS from there.
 

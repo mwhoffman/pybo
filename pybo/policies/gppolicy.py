@@ -17,7 +17,7 @@ import pygp
 # local imports
 from ._base import Policy
 from ._direct import solve_direct
-from ..utils.indexopt import global_solve
+from ..globalopt import solve_lbfgsb
 from ..policies import gpacquisition
 
 # exported symbols
@@ -29,7 +29,7 @@ __all__ = ['GPPolicy']
 # the meta policy
 
 POLICIES = dict((f, getattr(gpacquisition, f)) for f in gpacquisition.__all__)
-SOLVERS = dict(direct=solve_direct, lbfgsb=global_solve)
+SOLVERS = dict(direct=solve_direct, lbfgsb=solve_lbfgsb)
 INFERENCE = dict(fixed=lambda gp: gp)
 
 

@@ -6,7 +6,7 @@ import scipy.optimize as spop
 # local imports
 import pybo
 from pybo.policies._direct import solve_direct
-from pybo.utils.indexopt import global_solve
+from pybo.globalopt import solve_lbfgsb
 
 
 def test_global_solve_branin():
@@ -38,7 +38,7 @@ def test_global_solve_branin():
     nt.assert_allclose(df, df_, rtol=1e-6, atol=1e-6)
 
     # run global optimizer
-    xmin, fmin = global_solve(branin, bounds)
+    xmin, fmin = solve_lbfgsb(branin, bounds)
     nt.assert_allclose(fmin, 0.3978873, rtol=1e-6, atol=1e-6)
 
 
