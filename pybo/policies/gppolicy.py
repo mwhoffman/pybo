@@ -42,40 +42,48 @@ SOLVERS = dict(direct=solve_direct)
 # define the meta policy.
 
 class GPPolicy(Policy):
-    def __init__(self,
-                 bounds,
-                 noise=None,
+    def __init__(self, bounds, noise,
                  kernel='Matern3',
                  solver='direct',
                  policy='ei',
-                 inference='fixed'):
+                 inference='fixed',
+                 prior=None):
 
         # initialize the bounds and grab the function objects that will be used
         # as part of the meta policy.
         self._bounds = np.array(bounds, dtype=float, ndmin=2)
         self._solver = SOLVERS[solver]
         self._policy = POLICIES[policy]
-        self._inference = INFERENCE[inference]
 
-        # come up with some sane initial hyperparameters.
-        sn = 0.5 if (noise is None) else noise
-        sf = 1.0
-        ell = (self._bounds[:,1] - self._bounds[:,0]) / 10
-        self._gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
+        if isinstance(kernel, str):
+            # FIXME: come up with some sane initial hyperparameters.
+            sn = noise
+            sf = 1.0
+            ell = (self._bounds[:,1] - self._bounds[:,0]) / 10
+            gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
+
+            if prior is None:
+                # FIXME: come up with a default prior for ARD kernels of this
+                # type. this may or may not be used, however.
+                pass
+
+        if inference is not 'fixed' and prior is None:
+            raise Exception('a prior must be specified for models with'
+                            'hyperparameter inference and non-default kernels')
+
+        if inference is 'fixed':
+            self._model = gp
+        elif inference is 'mcmc':
+            self._model = pygp.meta.MCMC(gp, prior)
+        else:
+            raise Exception('Unknown inference type')
 
     def add_data(self, x, y):
-        self._gp.add_data(x, y)
-        self._marginal = self._inference(self._gp, None)
-        self._index = self._policy(self._marginal)
+        self._model.add_data(x, y)
 
     def get_next(self):
-        if self._gp.ndata == 0:
-            xnext = self._bounds[:,1] - self._bounds[:,0]
-            xnext /= 2
-            xnext += self._bounds[:,0]
-        else:
-            xnext, _ = self._solver(lambda x: -self._index(x), self._bounds)
-        return xnext
+        index = self._policy(self._model)
+        xnext, _ = self._solver(lambda x: -self._index(x), self._bounds)
 
     def get_best(self):
         return gpacquisition._get_best(self._marginal)[1]
