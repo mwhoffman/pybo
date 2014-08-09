@@ -10,44 +10,29 @@ from __future__ import print_function
 # global imports
 import numpy as np
 import scipy.stats as ss
-import functools
-import operator
 
 # exported symbols
 __all__ = ['ei', 'pi', 'ucb']
 
 
 def _integrate(models, index):
-    if hasattr(models, '__iter__'):
-        def index2(X, grad=False):
-            indices = [index(model, grad, X) for model in models]
-            if grad:
-                return tuple([np.sum(_, axis=0) for _ in zip(*indices)])
-            else:
-                return np.sum(indices, axis=0)
-    else:
-        def index2(X, grad=False):
-            return index(models, grad, X)
+    def index2(X, grad=False):
+        indices = [index(X, grad, model) for model in models]
+        if grad:
+            return tuple([np.sum(_, axis=0) for _ in zip(*indices)])
+        else:
+            return np.sum(indices, axis=0)
     return index2
 
 
-def _get_best(models):
-    if not isinstance(models, list):
-        models = [models]
-    f = np.mean([gp.posterior(gp._X)[0] for gp in models], axis=0)
-    j = f.argmax()
-    fbest = f[j]
-    xbest = models[0]._X[j]
-    return fbest, xbest
-
-
-def ei(models, xi=0.0):
-    fbest = _get_best(models)[0]
-    target = fbest + xi
+def ei(model, xi=0.0):
+    X, _ = model.data
+    f, _ = model.posterior(X)
+    target = f.max() + xi
 
     # define the index wrt a single model (that should act like a GP model, ie
     # in that it is marginally Gaussian and defines the posterior method).
-    def index(model, grad, X):
+    def index(X, grad=False, model=model):
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
@@ -70,14 +55,18 @@ def ei(models, xi=0.0):
         else:
             return ei
 
-    return _integrate(models, index)
+    if hasattr(model, '__iter__'):
+        return _integrate(index, model)
+    else:
+        return index
 
 
-def pi(models, xi=0.05):
-    fbest = _get_best(models)[0]
-    target = fbest + xi
+def pi(model, xi=0.05):
+    X, _ = model.data
+    f, _ = model.posterior(X)
+    target = f.max() + xi
 
-    def index(model, grad, X):
+    def index(X, grad=False, model=model):
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
@@ -98,15 +87,19 @@ def pi(models, xi=0.05):
         else:
             return cdfz
 
-    return _integrate(models, index)
+    if hasattr(model, '__iter__'):
+        return _integrate(index, model)
+    else:
+        return index
 
 
-def ucb(models, delta=0.1, xi=0.2):
-    def index(model, grad, X):
-        d = model._kernel.ndim
-        a = xi * 2 * np.log(np.pi**2 / 3 / delta)
-        b = xi * (4 + d)
+def ucb(model, delta=0.1, xi=0.2):
+    # NOTE: getting d in this way won't work unless data has been added.
+    d = model.data[0].shape[1]
+    a = xi * 2 * np.log(np.pi**2 / 3 / delta)
+    b = xi * (4 + d)
 
+    def index(X, grad=False):
         posterior = model.posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         beta = a + b * np.log(model.ndata + 1)
@@ -116,10 +109,4 @@ def ucb(models, delta=0.1, xi=0.2):
         else:
             return mu + np.sqrt(beta * s2)
 
-    # FIXME: while this can be implemented, it is not correct in that it does
-    # not form a true UCB when integrating over the hyperparameters.
-    return _integrate(models, index)
-
-
-# def thompson(gp, nfeatures=250):
-#     return fourier.FourierSample(gp, nfeatures)
+    return index
