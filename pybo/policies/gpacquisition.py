@@ -16,6 +16,11 @@ __all__ = ['ei', 'pi', 'ucb']
 
 
 def _integrate(models, index):
+    """
+    Helper method which integrates the given index function over the given
+    models. Here `models` can be any iterable object where each element returned
+    by the iterator could have been passed to the index object itself.
+    """
     def index2(X, grad=False):
         indices = [index(X, grad, model) for model in models]
         if grad:

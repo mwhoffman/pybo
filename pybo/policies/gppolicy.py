@@ -78,10 +78,10 @@ class GPPolicy(Policy):
     def add_data(self, x, y):
         self._model.add_data(x, y)
 
-    def get_next(self):
+    def get_next(self, return_index=False):
         index = self._policy(self._model)
         xnext, _ = self._solver(lambda x: -index(x), self._bounds)
-        return xnext
+        return (xnext, index) if return_index else xnext
 
     def get_best(self):
         X, _ = self._model.data
