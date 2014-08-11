@@ -15,7 +15,7 @@ import scipy.optimize as spop
 
 # local imports
 import pybo
-import pybo.globalopt
+import pybo.globalopt as globalopt
 
 
 def branin(x, grad=False):
@@ -55,11 +55,11 @@ def test_branin():
     nt.assert_allclose(df, df_, rtol=1e-6, atol=1e-6)
 
 
-def check_solver_branin(solver):
+def check_solver(solver):
     _, fmin = solver(branin, branin.bounds)
     nt.assert_allclose(fmin, branin.fmin, rtol=1e-6, atol=1e-6)
 
 
-def test_global_solve_branin():
-    for fname in pybo.globalopt.__all__:
-        yield check_solver_branin, getattr(pybo.globalopt, fname)
+def test_solvers():
+    for fname in globalopt.__all__:
+        yield check_solver, getattr(globalopt, fname)
