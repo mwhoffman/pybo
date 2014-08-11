@@ -3,6 +3,7 @@ import matplotlib.pyplot as pl
 
 import pygp
 import pygp.plotting
+
 import pybo.models
 import pybo.policies
 
@@ -22,16 +23,21 @@ def run_model(model, policy, T):
     for i in xrange(T):
         x, index = policy.get_next(return_index=True)
 
-        # evaluate the index at the test points.
-        index = np.log(index(X))
-        index -= np.max(index)
+        pygp.plotting.plot(policy._model, xmin=xmin, xmax=xmax, subplot=211, draw=False)
+        pl.plot(X, model.get_f(X), 'k--', lw=2)
+        pl.axvline(x, color='r')
+        pl.ylabel('posterior')
+        pl.gca().set_xticklabels([])
+        pl.gca().set_yticklabels([])
 
-        pl.clf()
-        pl.plot(X, model.get_f(X), 'k--', lw=2, zorder=1)
-        pl.plot(X, index, lw=2, zorder=2)
-        pl.axvline(x, color='r', zorder=3)
-        pl.axis('tight')
-        pl.axis(ymin=-3.4, ymax=3.4, xmin=xmin, xmax=xmax)
+        pl.subplot(212)
+        pl.cla()
+        pl.plot(X, index(X), lw=2)
+        pl.axvline(x, color='r')
+        pl.axis(xmin=xmin, xmax=xmax)
+        pl.ylabel('acquisition')
+        pl.gca().set_xticklabels([])
+        pl.gca().set_yticklabels([])
         pl.draw()
 
         y = model(x)
