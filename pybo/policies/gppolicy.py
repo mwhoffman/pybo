@@ -28,11 +28,18 @@ __all__ = ['GPPolicy']
 # define dictionaries containing functions that can be used for various parts of
 # the meta policy
 
-def _make_dict(module):
-    return dict((f.lower(), getattr(module, f)) for f in module.__all__)
+def _make_dict(module, lstrip='', rstrip=''):
+    def generator():
+        for fname in module.__all__:
+            f = getattr(module, fname)
+            fname = fname[len(lstrip):] if fname.startswith(lstrip) else fname
+            fname = fname[::-1][len(rstrip):][::-1] if fname.endswith(rstrip) else fname
+            fname = fname.lower()
+            yield fname, f
+    return dict(generator())
 
 MODELS   = _make_dict(pygp.meta)
-SOLVERS  = _make_dict(globalopt)
+SOLVERS  = _make_dict(globalopt, lstrip='solve_')
 POLICIES = _make_dict(gpacquisition)
 
 
@@ -42,7 +49,7 @@ POLICIES = _make_dict(gpacquisition)
 class GPPolicy(Policy):
     def __init__(self, bounds, noise,
                  kernel='Matern3',
-                 solver='solve_direct',
+                 solver='direct',
                  policy='ei',
                  inference='fixed',
                  prior=None):
