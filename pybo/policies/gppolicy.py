@@ -17,9 +17,7 @@ import pygp.meta
 
 # local imports
 from ._base import Policy
-from ._direct import solve_direct
-
-# these submodules define the different parts that make up the "meta" strategy.
+from .. import globalopt
 from . import gpacquisition
 
 # exported symbols
@@ -33,9 +31,9 @@ __all__ = ['GPPolicy']
 def _make_dict(module):
     return dict((f.lower(), getattr(module, f)) for f in module.__all__)
 
-MODELS = _make_dict(pygp.meta)
+MODELS   = _make_dict(pygp.meta)
+SOLVERS  = _make_dict(globalopt)
 POLICIES = _make_dict(gpacquisition)
-SOLVERS = dict(direct=solve_direct)
 
 
 #===============================================================================
@@ -44,7 +42,7 @@ SOLVERS = dict(direct=solve_direct)
 class GPPolicy(Policy):
     def __init__(self, bounds, noise,
                  kernel='Matern3',
-                 solver='direct',
+                 solver='solve_direct',
                  policy='ei',
                  inference='fixed',
                  prior=None):
@@ -82,7 +80,7 @@ class GPPolicy(Policy):
 
     def get_next(self, return_index=False):
         index = self._policy(self._model)
-        xnext, _ = self._solver(lambda x: -index(x), self._bounds)
+        xnext, _ = self._solver(index, self._bounds, max=True)
         return (xnext, index) if return_index else xnext
 
     def get_best(self):
