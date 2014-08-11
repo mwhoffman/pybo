@@ -16,9 +16,9 @@ import pygp
 
 # local imports
 from ._base import Policy
-from ._direct import solve_direct
-from ..globalopt import solve_lbfgsb
-from ..policies import gpacquisition
+
+from .. import globalopt
+from .  import gpacquisition
 
 # exported symbols
 __all__ = ['GPPolicy']
@@ -28,8 +28,8 @@ __all__ = ['GPPolicy']
 # define dictionaries containing functions that can be used for various parts of
 # the meta policy
 
-POLICIES = dict((f, getattr(gpacquisition, f)) for f in gpacquisition.__all__)
-SOLVERS = dict(direct=solve_direct, lbfgsb=solve_lbfgsb)
+POLICIES  = dict((f, getattr(gpacquisition, f)) for f in gpacquisition.__all__)
+SOLVERS   = dict((f, getattr(globalopt, f)) for f in globalopt.__all__)
 INFERENCE = dict(fixed=lambda gp: gp)
 
 
@@ -41,7 +41,7 @@ class GPPolicy(Policy):
                  bounds,
                  noise=None,
                  kernel='Matern3',
-                 solver='direct',
+                 solver='solve_direct',
                  policy='ei',
                  inference='fixed'):
 

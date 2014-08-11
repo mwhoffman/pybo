@@ -28,7 +28,9 @@ __all__ = ['solve_direct']
 # and passes responsibility off to _run_direct.
 #
 
-def solve_direct(f, bounds, nmax=10000, maxit=50, epsilon=1e-10, report=False):
+def solve_direct(f, bounds,
+                 nmax=10000, maxit=50, epsilon=1e-10,
+                 report=False, max=False):
     """
     solve_direct(f, bounds, [nmax, maxit, epsilon, report])
 
@@ -42,11 +44,15 @@ def solve_direct(f, bounds, nmax=10000, maxit=50, epsilon=1e-10, report=False):
         report: whether or not to report intermediate results.
     """
     # initialize the rectangle structures.
-    f, trans, x, ell, r, fx = _init_rects(f, bounds, nmax)
+    f, trans, x, ell, r, fx = _init_rects(f, bounds, nmax, max)
 
     # run the inner loop, which just continually divides up the rectangles,
     # inserting them into the rects structure, and returns when it reaches nmax.
     xmin, fmin, n = _run_direct(f, x, ell, r, fx, epsilon, maxit)
+
+    if max:
+        fx *= -1
+        fmin *= -1
 
     # by default return a tuple of xmin, f(xmin). make sure to translate
     # xmin back into the original space first.
@@ -69,7 +75,7 @@ def solve_direct(f, bounds, nmax=10000, maxit=50, epsilon=1e-10, report=False):
 # just initialize everything. this only really needs to be called once, so we
 # don't need it to be fast at all. so python is fine. (plus it has no loops!)
 
-def _init_rects(f, bounds, nmax):
+def _init_rects(f, bounds, nmax, max):
     """
     Initialize a set of rectangles inside a bounding box with upper/lower bounds
     given by the `bounds`. Preallocate room for nmax rectangles (with 2*dim
@@ -92,7 +98,8 @@ def _init_rects(f, bounds, nmax):
     # create lambdas for evaluating f(x) in the original space, and also
     # for translating x back into this space.
     trans = lambda x: (ub - lb)*x + lb
-    ftrans = lambda x: f(trans(x))
+    ftrans = (lambda x: -f(trans(x))) if max else \
+             (lambda x:  f(trans(x)))
 
     # initialize the first point. note that we're translating each
     # dimension into the range [0,1] and ftrans is taking care of

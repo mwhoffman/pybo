@@ -41,5 +41,5 @@ if __name__ == '__main__':
         zip_safe=False,
         packages=find_packages(),
         ext_modules=[
-            SimpleExtension('pybo/policies/_direct.pyx'),
+            SimpleExtension('pybo/globalopt/direct.pyx'),
         ])
