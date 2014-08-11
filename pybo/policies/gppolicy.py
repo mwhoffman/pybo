@@ -60,10 +60,12 @@ class GPPolicy(Policy):
             gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
 
             if prior is None:
-                # FIXME: come up with a default prior for ARD kernels of this
-                # type. this may or may not be used, based on whether the
-                # inference is 'fixed' or not.
-                pass
+                # FIXME: this is not necessarily a good default prior, but it's
+                # useful for testing purposes for now.
+                prior = dict(
+                    sn =pygp.priors.Uniform(0.01, 1.0),
+                    sf =pygp.priors.Uniform(0.01, 5.0),
+                    ell=pygp.priors.Uniform(0.01, 1.0))
 
         if inference is not 'fixed' and prior is None:
             raise Exception('a prior must be specified for models with'

@@ -15,7 +15,7 @@ import scipy.stats as ss
 __all__ = ['ei', 'pi', 'ucb']
 
 
-def _integrate(models, index):
+def _integrate(index, models):
     """
     Helper method which integrates the given index function over the given
     models. Here `models` can be any iterable object where each element returned

@@ -48,6 +48,6 @@ if __name__ == '__main__':
     T = 100
     sigma = 0.05
     model = pybo.models.Sinusoidal(sigma)
-    policy = pybo.policies.GPPolicy(model.bounds, noise=sigma, policy='ei')
+    policy = pybo.policies.GPPolicy(model.bounds, noise=sigma, policy='ei', inference='mcmc')
 
     run_model(model, policy, T)
