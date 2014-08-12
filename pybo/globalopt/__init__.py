@@ -1,5 +1,5 @@
 from .direct import *
-from .lbfgsb import *
+from .lbfgs import *
 
 __all__ = []
 __all__ += direct.__all__
