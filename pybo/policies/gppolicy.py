@@ -85,6 +85,19 @@ class GPPolicy(Policy):
     def add_data(self, x, y):
         self._model.add_data(x, y)
 
+    def get_init(self):
+        """
+        Return an initial set of locations to query as an (n,d)-array consisting
+        of n points of dimension d.
+        """
+        lo = self._bounds[:,0]
+        wd = self._bounds[:,1] - lo
+
+        # this basic example just returns a single point centered at the middle
+        # of the bounded region.
+        init = lo + 0.5 * wd
+        return init[None]
+
     def get_next(self, return_index=False):
         index = self._policy(self._model)
         xnext, _ = self._solver(index, self._bounds, max=True)

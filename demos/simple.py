@@ -13,15 +13,16 @@ def run_model(model, policy, T):
     xmax = model.bounds[0,1]
 
     X = np.linspace(xmin, xmax, 200)[:, None]
-
     f = model.get_f(X)
+
     ymin, ymax = f.min(), f.max()
     ymin -= 0.2 * (ymax - ymin)
     ymax += 0.4 * (ymax - ymin)
 
-    x = (xmax-xmin) / 2 + xmin
-    y = model(x)
-    policy.add_data(x, y)
+    # get any initial points.
+    for x in policy.get_init():
+        y = model(x)
+        policy.add_data(x, y)
 
     pl.figure(1)
     pl.show()
