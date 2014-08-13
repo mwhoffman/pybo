@@ -16,6 +16,7 @@ pybo.policies._base
 pybo.policies.gpacquisition
 pybo.policies.gppolicy
 pybo.policies
+pybo.solver
 pybo
 """.split()
 

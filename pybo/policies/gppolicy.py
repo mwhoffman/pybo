@@ -49,7 +49,7 @@ POLICIES = _make_dict(gpacquisition)
 class GPPolicy(Policy):
     def __init__(self, bounds, noise,
                  kernel='matern3',
-                 solver='direct',
+                 solver='lbfgs',
                  policy='ei',
                  inference='fixed',
                  prior=None):
@@ -70,7 +70,7 @@ class GPPolicy(Policy):
                 prior = dict(
                     sn =pygp.priors.Uniform(0.01, 1.0),
                     sf =pygp.priors.Uniform(0.01, 5.0),
-                    ell=pygp.priors.Uniform(0.01, 1.0))
+                    ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
 
         if inference is not 'fixed' and prior is None:
             raise Exception('a prior must be specified for models with'
