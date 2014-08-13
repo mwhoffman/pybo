@@ -11,7 +11,13 @@ import pybo.policies
 def run_model(model, policy, T):
     xmin = model.bounds[0,0]
     xmax = model.bounds[0,1]
+
     X = np.linspace(xmin, xmax, 200)[:, None]
+
+    f = model.get_f(X)
+    ymin, ymax = f.min(), f.max()
+    ymin -= 0.2 * (ymax - ymin)
+    ymax += 0.4 * (ymax - ymin)
 
     x = (xmax-xmin) / 2 + xmin
     y = model(x)
@@ -23,7 +29,10 @@ def run_model(model, policy, T):
     for i in xrange(T):
         x, index = policy.get_next(return_index=True)
 
-        pygp.plotting.plot(policy._model, xmin=xmin, xmax=xmax, subplot=211, draw=False)
+        pygp.plotting.plot(policy._model, xmin=xmin, xmax=xmax,
+                                          ymin=ymin, ymax=ymax,
+                                          subplot=211, draw=False)
+
         pl.plot(X, model.get_f(X), 'k--', lw=2)
         pl.axvline(x, color='r')
         pl.ylabel('posterior')
@@ -47,7 +56,9 @@ def run_model(model, policy, T):
 if __name__ == '__main__':
     T = 100
     sigma = 0.05
-    model = pybo.models.Sinusoidal(sigma)
+    gp = pygp.BasicGP(sigma, 1.0, 0.1)
+    model = pybo.models.GPModel([3, 4], gp)
+
     policy = pybo.policies.GPPolicy(model.bounds,
                                     noise=sigma,
                                     policy='ei',
