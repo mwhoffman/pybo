@@ -7,7 +7,7 @@ fnames = """
 pybo.utils.ldsample
 pybo.utils
 pybo.globalopt.direct
-pybo.globalopt.lbfgsb
+pybo.globalopt.lbfgs
 pybo.globalopt
 pybo.models.gps
 pybo.models.functions

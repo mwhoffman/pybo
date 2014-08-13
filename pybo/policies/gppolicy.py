@@ -91,6 +91,9 @@ class GPPolicy(Policy):
         return (xnext, index) if return_index else xnext
 
     def get_best(self):
-        X, _ = self._model.data
-        f, _ = self._model.posterior(X)
-        return X[f.argmax()]
+        def objective(X, grad=False):
+            return self._model.posterior(X, True)[::2] if grad else \
+                   self._model.posterior(X)[0]
+        Xtest, _ = self._model.data
+        xbest, _ = globalopt.solve_lbfgs(objective, self._bounds, xx=Xtest, max=True)
+        return xbest

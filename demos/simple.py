@@ -35,6 +35,7 @@ def run_model(model, policy, T):
 
         pl.plot(X, model.get_f(X), 'k--', lw=2)
         pl.axvline(x, color='r')
+        pl.axvline(policy.get_best(), color='g')
         pl.ylabel('posterior')
         pl.gca().set_xticklabels([])
         pl.gca().set_yticklabels([])

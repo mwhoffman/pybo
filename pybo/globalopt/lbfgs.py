@@ -15,7 +15,7 @@ import scipy.optimize
 __all__ = ['solve_lbfgs']
 
 
-def solve_lbfgs(f, bounds, ngrid=10000, nbest=10, max=False):
+def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, max=False):
     """
     Compute func on a grid, pick nbest points, and LBFGS from there.
 
@@ -35,9 +35,10 @@ def solve_lbfgs(f, bounds, ngrid=10000, nbest=10, max=False):
     dim = len(bounds)
     widths = bounds[:, 1] - bounds[:, 0]
 
-    # TODO: The following line could be replaced with a regular grid or a
-    # Sobol grid.
-    xx = bounds[:, 0] + widths * np.random.rand(ngrid, dim)
+    if xx is None:
+        # TODO: The following line could be replaced with a regular grid or a
+        # Sobol grid.
+        xx = bounds[:, 0] + widths * np.random.rand(ngrid, dim)
 
     # compute func_grad on points xx
     ff = f(xx, grad=False)
