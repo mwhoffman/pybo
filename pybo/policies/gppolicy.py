@@ -48,7 +48,7 @@ POLICIES = _make_dict(gpacquisition)
 
 class GPPolicy(Policy):
     def __init__(self, bounds, noise,
-                 kernel='Matern3',
+                 kernel='matern3',
                  solver='direct',
                  policy='ei',
                  inference='fixed',
