@@ -80,7 +80,13 @@ class GPPolicy(Policy):
         self._bounds = bounds
         self._solver = SOLVERS[solver]
         self._policy = POLICIES[policy]
-        self._model = gp if (inference is 'fixed') else MODELS[inference](gp, prior)
+        self._model = gp if (inference is 'fixed') else MODELS[inference](gp, prior, n=10)
+
+        # FIXME: this is assuming that the inference methods all correspond to
+        # Monte Carlo estimators where the number of samples can be selected by
+        # a kwarg n. We probably want to have a default here for those type of
+        # models, but should allow this to be changed (probably via kwargs in
+        # GPPolicy).
 
     def add_data(self, x, y):
         self._model.add_data(x, y)

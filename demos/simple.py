@@ -58,8 +58,8 @@ def run_model(model, policy, T):
 if __name__ == '__main__':
     T = 100
     sigma = 0.05
-    gp = pygp.BasicGP(sigma, 1.0, 0.1)
-    model = pybo.models.GPModel([3, 4], gp)
+    gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern1')
+    model = pybo.models.GPModel([3, 5], gp)
 
     policy = pybo.policies.GPPolicy(model.bounds,
                                     noise=sigma,
