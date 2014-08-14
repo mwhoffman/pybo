@@ -10,109 +10,109 @@ from __future__ import print_function
 
 # global imports
 import numpy as np
-import scipy.stats as ss
+
+# not "exactly" local, but...
+import pygp
+import pygp.meta
 
 # local imports
 from ._base import Policy
-from ._direct import solve_direct
-
-# not "exactly" local, but...
-from pygp import BasicGP
-from pygp.extra.fourier import FourierSample
+from .. import globalopt
+from . import gpacquisition
 
 # exported symbols
 __all__ = ['GPPolicy']
 
 
 #===============================================================================
-# we'll first create a dictionary which will map strings to acquisition
-# functions and create the decorator _register to put them into this dict. NOTE:
-# this does absolutely nothing to the function decorated.
+# define dictionaries containing functions that can be used for various parts of
+# the meta policy
 
-ACQUISITION_FUNCTIONS = dict()
+def _make_dict(module, lstrip='', rstrip=''):
+    def generator():
+        for fname in module.__all__:
+            f = getattr(module, fname)
+            fname = fname[len(lstrip):] if fname.startswith(lstrip) else fname
+            fname = fname[::-1][len(rstrip):][::-1] if fname.endswith(rstrip) else fname
+            fname = fname.lower()
+            yield fname, f
+    return dict(generator())
 
-def _register(f):
-    ACQUISITION_FUNCTIONS[f.__name__] = f
-    return f
-
-
-#===============================================================================
-# definition of "simple" acquisition functions. all of the following functions
-# act sort of like constructors for the acquisition function. they take a GP
-# object and some optional set of parameters and return an index function which
-# can then be optimized.
-
-@_register
-def gpei(gp, xi=0.0):
-    fmax = gp.xmax()[1] if (gp.ndata > 0) else 0
-    def index(X):
-        mu, s2 = gp.posterior(X)
-        s = np.sqrt(s2, out=s2)
-        d = mu - fmax - xi
-        z = d / s
-        return d*ss.norm.cdf(z) + s*ss.norm.pdf(z)
-    return index
-
-
-@_register
-def gppi(gp, xi=0.05):
-    fmax = gp.xmax()[1] if (gp.ndata > 0) else 0
-    def index(X):
-        mu, s2 = gp.posterior(X)
-        mu -= fmax + xi
-        mu /= np.sqrt(s2, out=s2)
-        return mu
-    return index
-
-
-@_register
-def gpucb(gp, delta=0.1, xi=0.2):
-    d = gp._kernel.ndim
-    a = xi*2*np.log(np.pi**2 / 3 / delta)
-    b = xi*(4+d)
-    def index(X):
-        mu, s2 = gp.posterior(X)
-        beta = a + b * np.log(gp.ndata+1)
-        return mu + np.sqrt(beta*s2)
-    return index
-
-
-@_register
-def thompson(gp, nfeatures=250):
-    return FourierSample(gp, nfeatures)
+MODELS   = _make_dict(pygp.meta)
+SOLVERS  = _make_dict(globalopt, lstrip='solve_')
+POLICIES = _make_dict(gpacquisition)
 
 
 #===============================================================================
 # define the meta policy.
 
 class GPPolicy(Policy):
-    def __init__(self, bounds, sn, sf, ell, acq='gpucb', **extra):
-        if acq not in ACQUISITION_FUNCTIONS:
-            raise RuntimeError('unknown acquisition function')
+    def __init__(self, bounds, noise,
+                 kernel='matern3',
+                 solver='lbfgs',
+                 policy='ei',
+                 inference='fixed',
+                 prior=None):
 
-        self._bounds = np.array(bounds, dtype=float, ndmin=2)
-        self._gp = BasicGP(sn, sf, np.array(ell, ndmin=1))
-        self._extra = extra
+        # make sure the bounds are a 2d-array.
+        bounds = np.array(bounds, dtype=float, ndmin=2)
 
-        # _acq generates _index every time we add data. technically we don't
-        # really need to save the index, but it's useful for
-        # debugging/visualization purposes.
-        self._acq = ACQUISITION_FUNCTIONS[acq]
-        self._index = self._acq(self._gp, **self._extra)
+        if isinstance(kernel, str):
+            # FIXME: come up with some sane initial hyperparameters.
+            sn = noise
+            sf = 1.0
+            ell = (bounds[:,1] - bounds[:,0]) / 10
+            gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
+
+            if prior is None:
+                # FIXME: this is not necessarily a good default prior, but it's
+                # useful for testing purposes for now.
+                prior = dict(
+                    sn =pygp.priors.Uniform(0.01, 1.0),
+                    sf =pygp.priors.Uniform(0.01, 5.0),
+                    ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
+
+        if inference is not 'fixed' and prior is None:
+            raise Exception('a prior must be specified for models with'
+                            'hyperparameter inference and non-default kernels')
+
+        # save all the bits of our meta-policy.
+        self._bounds = bounds
+        self._solver = SOLVERS[solver]
+        self._policy = POLICIES[policy]
+        self._model = gp if (inference is 'fixed') else MODELS[inference](gp, prior, n=10)
+
+        # FIXME: this is assuming that the inference methods all correspond to
+        # Monte Carlo estimators where the number of samples can be selected by
+        # a kwarg n. We probably want to have a default here for those type of
+        # models, but should allow this to be changed (probably via kwargs in
+        # GPPolicy).
 
     def add_data(self, x, y):
-        self._gp.add_data(x, y)
-        self._index = self._acq(self._gp, **self._extra)
+        self._model.add_data(x, y)
 
-    def get_next(self):
-        if self._gp.ndata == 0:
-            xnext = self._bounds[:,1] - self._bounds[:,0]
-            xnext /= 2
-            xnext += self._bounds[:,0]
-        else:
-            xnext, _ = solve_direct(lambda x: -self._index(x), self._bounds)
-        return xnext
+    def get_init(self):
+        """
+        Return an initial set of locations to query as an (n,d)-array consisting
+        of n points of dimension d.
+        """
+        lo = self._bounds[:,0]
+        wd = self._bounds[:,1] - lo
+
+        # this basic example just returns a single point centered at the middle
+        # of the bounded region.
+        init = lo + 0.5 * wd
+        return init[None]
+
+    def get_next(self, return_index=False):
+        index = self._policy(self._model)
+        xnext, _ = self._solver(index, self._bounds, max=True)
+        return (xnext, index) if return_index else xnext
 
     def get_best(self):
-        xmax, _ = self._gp.xmax()
-        return xmax
+        def objective(X, grad=False):
+            return self._model.posterior(X, True)[::2] if grad else \
+                   self._model.posterior(X)[0]
+        Xtest, _ = self._model.data
+        xbest, _ = globalopt.solve_lbfgs(objective, self._bounds, xx=Xtest, max=True)
+        return xbest

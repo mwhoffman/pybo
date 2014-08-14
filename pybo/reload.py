@@ -6,13 +6,17 @@
 fnames = """
 pybo.utils.ldsample
 pybo.utils
+pybo.globalopt.direct
+pybo.globalopt.lbfgs
+pybo.globalopt
 pybo.models.gps
 pybo.models.functions
 pybo.models
 pybo.policies._base
-pybo.policies._direct
+pybo.policies.gpacquisition
 pybo.policies.gppolicy
 pybo.policies
+pybo.solver
 pybo
 """.split()
 

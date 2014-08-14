@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as pl
 
 import pygp
+import pygp.plotting
+
 import pybo.models
 import pybo.policies
 
@@ -9,37 +11,60 @@ import pybo.policies
 def run_model(model, policy, T):
     xmin = model.bounds[0,0]
     xmax = model.bounds[0,1]
+
     X = np.linspace(xmin, xmax, 200)[:, None]
-    x = (xmax-xmin) / 2 + xmin
+    f = model.get_f(X)
+
+    ymin, ymax = f.min(), f.max()
+    ymin -= 0.2 * (ymax - ymin)
+    ymax += 0.4 * (ymax - ymin)
+
+    # get any initial points.
+    for x in policy.get_init():
+        y = model(x)
+        policy.add_data(x, y)
 
     pl.figure(1)
     pl.show()
 
     for i in xrange(T):
+        x, index = policy.get_next(return_index=True)
+
+        pygp.plotting.plot(policy._model, xmin=xmin, xmax=xmax,
+                                          ymin=ymin, ymax=ymax,
+                                          subplot=211, draw=False)
+
+        pl.plot(X, model.get_f(X), 'k--', lw=2)
+        pl.axvline(x, color='r')
+        pl.axvline(policy.get_best(), color='g')
+        pl.ylabel('posterior')
+        pl.gca().set_xticklabels([])
+        pl.gca().set_yticklabels([])
+
+        pl.subplot(212)
+        pl.cla()
+        pl.plot(X, index(X), lw=2)
+        pl.axvline(x, color='r')
+        pl.axis(xmin=xmin, xmax=xmax)
+        pl.ylabel('acquisition')
+        pl.gca().set_xticklabels([])
+        pl.gca().set_yticklabels([])
+        pl.draw()
+
         y = model(x)
         policy.add_data(x, y)
-        x = policy.get_next()
-
-        pygp.gpplot(policy._gp, xmin=xmin, xmax=xmax, draw=False)
-
-        pl.plot(X, model.get_f(X), lw=2, color='c')
-        pl.plot(X, policy._index(X), lw=2)
-        pl.axvline(x, color='r')
-        pl.axis('tight')
-        pl.axis(ymin=-3.4, ymax=3.4, xmin=xmin, xmax=xmax)
-        pl.draw()
 
 
 if __name__ == '__main__':
-    sn = 0.2
-    sf = 1.25
-    ell = 0.05
-    bounds = [0.5, 2.5]
     T = 100
+    sigma = 0.05
+    gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern1')
+    model = pybo.models.GPModel([3, 5], gp)
 
-    kernel = pygp.kernels.SEARD(sf, ell)
-    model = pybo.models.Gramacy(sn)
-
-    policy = pybo.policies.GPPolicy(model.bounds, sn, sf, ell, 'gppi')
+    policy = pybo.policies.GPPolicy(model.bounds,
+                                    noise=sigma,
+                                    policy='ei',
+                                    solver='lbfgs',
+                                    inference='mcmc')
 
     run_model(model, policy, T)

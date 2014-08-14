@@ -11,10 +11,13 @@ from __future__ import print_function
 import numpy as np
 
 # local imports
-from pygp.extra.fourier import FourierSample
+from ..utils.random import rstate
 
 # exported symbols
 __all__ = ['GPModel']
+
+
+# FIXME: GPModel is broken now. needs to be fixed.
 
 
 class GPModel(object):
@@ -27,18 +30,17 @@ class GPModel(object):
     NOTE: fixing the rng input will fix the function sampled, but for sigma>0
     any noisy data will use numpy's global random state.
     """
-    def __init__(self, bounds, kernel, sigma=0, N=500, rng=None):
+    def __init__(self, bounds, gp, N=500, rng=None):
         self.bounds = np.array(bounds, dtype=float, ndmin=2)
-        self._f = FourierSample(kernel, N, rng)
-        self._sigma = sigma
+        self._rng = rstate(rng)
+        self._f = gp.sample_fourier(N, self._rng)
+        self._likelihood = gp._likelihood.copy()
 
     def __call__(self, x):
         return self.get(x)[0]
 
     def get(self, X):
-        y = self.get_f(X)
-        y += np.random.normal(scale=self._sigma, size=len(y)) if (self._sigma > 0) else 0.0
-        return y
+        return self._likelihood.sample(self.get_f(X), self._rng)
 
     def get_f(self, X):
-        return self._f(np.array(X, ndmin=2, copy=False))
+        return self._f.get(np.array(X, ndmin=2, copy=False))
