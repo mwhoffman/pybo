@@ -32,7 +32,8 @@ def solve_policy(model, policy, T):
                         ('regret', np.float)])
 
     # evaluate points found in the initial design. also make sure to only look
-    # at the first T points (ie if we're given a very restrictive time horizon).
+    # at the first T points (ie if we're given a very restrictive time
+    # horizon).
     for t, x in enumerate(X[:T]):
         y = model(x)
         policy.add_data(x, y)
