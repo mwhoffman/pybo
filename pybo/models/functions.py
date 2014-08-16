@@ -17,10 +17,10 @@ __all__ = ['Sinusoidal', 'Gramacy', 'Branin', 'Bohachevsky', 'Goldstein']
 
 class GOModel(object):
     """
-    Base class for "global optimization" models. Every subclass should implement
-    a static method `f` which evaluates the function. Note that `f` should be
-    amenable to _minimization_, but calls to `get_data` will return the negative
-    of `f` so we can maximize the function.
+    Base class for "global optimization" models. Every subclass should
+    implement a static method `f` which evaluates the function. Note that `f`
+    should be amenable to _minimization_, but calls to `get_data` will return
+    the negative of `f` so we can maximize the function.
     """
     def __init__(self, sigma=0.0):
         self._sigma = sigma
@@ -30,7 +30,8 @@ class GOModel(object):
 
     def get(self, X):
         y = self.get_f(X)
-        y += np.random.normal(scale=self._sigma, size=len(y)) if (self._sigma > 0) else 0.0
+        if self._sigma > 0:
+            y += np.random.normal(scale=self._sigma, size=len(y))
         return y
 
     def get_f(self, X):
@@ -48,7 +49,7 @@ def _cleanup(cls):
     """
     cls.bounds = np.array(cls.bounds, ndmin=2, dtype=float)
     cls.xmax = np.array(cls.xmax, ndmin=1, dtype=float)
-    cls.fmax = -cls._f(cls.xmax[None,:])[0]
+    cls.fmax = -cls._f(cls.xmax[None, :])[0]
     return cls
 
 
@@ -95,8 +96,8 @@ class Branin(GOModel):
 
     @staticmethod
     def _f(x):
-        y = (x[:,1]-(5.1/(4*np.pi**2))*x[:,0]**2+5*x[:,0]/np.pi-6)**2
-        y += 10*(1-1/(8*np.pi))*np.cos(x[:,0])+10
+        y = (x[:, 1]-(5.1/(4*np.pi**2))*x[:, 0]**2+5*x[:, 0]/np.pi-6)**2
+        y += 10*(1-1/(8*np.pi))*np.cos(x[:, 0])+10
         ## NOTE: this rescales branin by 10 to make it more manageable.
         y /= 10.
         return y
@@ -113,27 +114,29 @@ class Bohachevsky(GOModel):
 
     @staticmethod
     def _f(x):
-        y = 0.7 + x[:,0]**2 + 2.0*x[:,1]**2
-        y -= 0.3*np.cos(3*np.pi*x[:,0])
-        y -= 0.4*np.cos(4*np.pi*x[:,1])
+        y = 0.7 + x[:, 0]**2 + 2.0*x[:, 1]**2
+        y -= 0.3*np.cos(3*np.pi*x[:, 0])
+        y -= 0.4*np.cos(4*np.pi*x[:, 1])
         return y
 
 
 @_cleanup
 class Goldstein(GOModel):
     """
-    The Goldstein & Price function in 2d, bounded in [-2,-2] to [2,2]. There are
-    several local minima and a single global minima at [0,-1] with value 3.
+    The Goldstein & Price function in 2d, bounded in [-2,-2] to [2,2]. There
+    are several local minima and a single global minima at [0,-1] with value 3.
     """
     bounds = [[-2, 2], [-2, 2]]
     xmax = [0, -1]
 
     @staticmethod
     def _f(x):
-        a = 1+(x[:,0] + x[:,1]+1)**2 * \
-            (19-14*x[:,0] +
-             3*x[:,0]**2 - 14*x[:,1] + 6*x[:,0]*x[:,1] + 3*x[:,1]**2)
-        b = 30 + (2*x[:,0] - 3*x[:,1])**2 * \
-            (18-32*x[:,0] + 12*x[:,0]**2 + 48*x[:,1] - 36*x[:,0] * x[:,1] +
-             27*x[:,1]**2)
+        a = (1 +
+             (x[:, 0] + x[:, 1]+1)**2 *
+             (19-14*x[:, 0] +
+              3*x[:, 0]**2 - 14*x[:, 1] + 6*x[:, 0]*x[:, 1] + 3*x[:, 1]**2))
+        b = (30 +
+             (2*x[:, 0] - 3*x[:, 1])**2 *
+             (18 - 32*x[:, 0] + 12*x[:, 0]**2 + 48*x[:, 1] - 36*x[:, 0]*x[:, 1]
+              + 27*x[:, 1]**2))
         return a * b

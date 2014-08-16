@@ -18,8 +18,8 @@ __all__ = ['ei', 'pi', 'ucb']
 def _integrate(index, models):
     """
     Helper method which integrates the given index function over the given
-    models. Here `models` can be any iterable object where each element returned
-    by the iterator could have been passed to the index object itself.
+    models. Here `models` can be any iterable object where each element
+    returned by the iterator could have been passed to the index object itself.
     """
     def index2(X, grad=False):
         indices = [index(X, grad, model) for model in models]
@@ -53,9 +53,9 @@ def ei(model, xi=0.0):
             # The indexing tricks just interpret the "scalar" quantities as
             # (n,1)-arrays so that we can use numpy's broadcasting rules.
             dmu, ds2 = posterior[2:]
-            dei = 0.5 * ds2 / s2[:,None]
-            dei *= (ei - s * z * cdfz)[:,None]
-            dei += cdfz[:,None] * dmu
+            dei = 0.5 * ds2 / s2[:, None]
+            dei *= (ei - s * z * cdfz)[:, None]
+            dei += cdfz[:, None] * dmu
             return ei, dei
         else:
             return ei
@@ -110,7 +110,8 @@ def ucb(model, delta=0.1, xi=0.2):
         beta = a + b * np.log(model.ndata + 1)
         if grad:
             dmu, ds2 = posterior[2:]
-            return mu + np.sqrt(beta * s2), dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2
+            return (mu + np.sqrt(beta * s2),
+                    dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2)
         else:
             return mu + np.sqrt(beta * s2)
 

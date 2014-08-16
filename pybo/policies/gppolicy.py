@@ -24,27 +24,26 @@ from . import gpacquisition
 __all__ = ['GPPolicy']
 
 
-#===============================================================================
-# define dictionaries containing functions that can be used for various parts of
-# the meta policy
+### ENUMERATE POSSIBLE META POLICY COMPONENTS #################################
 
 def _make_dict(module, lstrip='', rstrip=''):
     def generator():
         for fname in module.__all__:
             f = getattr(module, fname)
-            fname = fname[len(lstrip):] if fname.startswith(lstrip) else fname
-            fname = fname[::-1][len(rstrip):][::-1] if fname.endswith(rstrip) else fname
+            if fname.startswith(lstrip):
+                fname = fname[len(lstrip):]
+            if fname.endswith(rstrip):
+                fname = fname[::-1][len(rstrip):][::-1]
             fname = fname.lower()
             yield fname, f
     return dict(generator())
 
-MODELS   = _make_dict(pygp.meta)
-SOLVERS  = _make_dict(globalopt, lstrip='solve_')
+MODELS = _make_dict(pygp.meta)
+SOLVERS = _make_dict(globalopt, lstrip='solve_')
 POLICIES = _make_dict(gpacquisition)
 
 
-#===============================================================================
-# define the meta policy.
+#### DEFINE THE META POLICY ###################################################
 
 class GPPolicy(Policy):
     def __init__(self, bounds, noise,
@@ -61,15 +60,15 @@ class GPPolicy(Policy):
             # FIXME: come up with some sane initial hyperparameters.
             sn = noise
             sf = 1.0
-            ell = (bounds[:,1] - bounds[:,0]) / 10
+            ell = (bounds[:, 1] - bounds[:, 0]) / 10
             gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
 
             if prior is None:
                 # FIXME: this is not necessarily a good default prior, but it's
                 # useful for testing purposes for now.
                 prior = dict(
-                    sn =pygp.priors.Uniform(0.01, 1.0),
-                    sf =pygp.priors.Uniform(0.01, 5.0),
+                    sn=pygp.priors.Uniform(0.01, 1.0),
+                    sf=pygp.priors.Uniform(0.01, 5.0),
                     ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
 
         if inference is not 'fixed' and prior is None:
@@ -80,7 +79,11 @@ class GPPolicy(Policy):
         self._bounds = bounds
         self._solver = SOLVERS[solver]
         self._policy = POLICIES[policy]
-        self._model = gp if (inference is 'fixed') else MODELS[inference](gp, prior, n=10)
+
+        if inference is 'fixed':
+            self._model = gp
+        else:
+            self._model = MODELS[inference](gp, prior, n=10)
 
         # FIXME: this is assuming that the inference methods all correspond to
         # Monte Carlo estimators where the number of samples can be selected by
@@ -92,12 +95,8 @@ class GPPolicy(Policy):
         self._model.add_data(x, y)
 
     def get_init(self):
-        """
-        Return an initial set of locations to query as an (n,d)-array consisting
-        of n points of dimension d.
-        """
-        lo = self._bounds[:,0]
-        wd = self._bounds[:,1] - lo
+        lo = self._bounds[:, 0]
+        wd = self._bounds[:, 1] - lo
 
         # this basic example just returns a single point centered at the middle
         # of the bounded region.
@@ -111,8 +110,11 @@ class GPPolicy(Policy):
 
     def get_best(self):
         def objective(X, grad=False):
-            return self._model.posterior(X, True)[::2] if grad else \
-                   self._model.posterior(X)[0]
+            if grad:
+                return self._model.posterior(X, True)[::2]
+            else:
+                return self._model.posterior(X)[0]
         Xtest, _ = self._model.data
-        xbest, _ = globalopt.solve_lbfgs(objective, self._bounds, xx=Xtest, max=True)
+        xbest, _ = globalopt.solve_lbfgs(objective, self._bounds, xx=Xtest,
+                                         max=True)
         return xbest
