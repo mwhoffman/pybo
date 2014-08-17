@@ -27,7 +27,12 @@ __all__ = ['GPPolicy']
 ### ENUMERATE POSSIBLE META POLICY COMPONENTS #################################
 
 def _make_dict(module, lstrip='', rstrip=''):
+    """
+    Given a module return a dictionary mapping the name of each of its exported
+    functions to the function itself.
+    """
     def generator():
+        """Generate the (name, function) tuples."""
         for fname in module.__all__:
             f = getattr(module, fname)
             if fname.startswith(lstrip):
@@ -46,6 +51,9 @@ POLICIES = _make_dict(gpacquisition)
 #### DEFINE THE META POLICY ###################################################
 
 class GPPolicy(Policy):
+    """
+    Meta-policy for GP-based Bayesian optimization.
+    """
     def __init__(self, bounds, noise,
                  kernel='matern3',
                  solver='lbfgs',
@@ -104,12 +112,14 @@ class GPPolicy(Policy):
         return init[None]
 
     def get_next(self, return_index=False):
+        # pylint: disable=arguments-differ
         index = self._policy(self._model)
         xnext, _ = self._solver(index, self._bounds, max=True)
         return (xnext, index) if return_index else xnext
 
     def get_best(self):
         def objective(X, grad=False):
+            """Objective corresponding to the posterior mean."""
             if grad:
                 return self._model.posterior(X, True)[::2]
             else:
