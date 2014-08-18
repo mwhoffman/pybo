@@ -15,7 +15,7 @@ import scipy.optimize
 __all__ = ['solve_lbfgs']
 
 
-def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, max=False):
+def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, maximize=False):
     """
     Compute func on a grid, pick nbest points, and LBFGS from there.
 
@@ -44,7 +44,7 @@ def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, max=False):
     ff = f(xx, grad=False)
     idx_sorted = np.argsort(ff)
 
-    if max:
+    if maximize:
         idx_sorted = idx_sorted[::-1]
 
     # lbfgsb needs the gradient to be "contiguous", squeezing the gradient
@@ -52,7 +52,7 @@ def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, max=False):
     def objective(x):
         fx, gx = f(x[None], grad=True)
         fx, gx = fx[0], gx[0]
-        if max:
+        if maximize:
             fx, gx = -fx, -gx
         return fx, gx
 
@@ -64,4 +64,4 @@ def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, max=False):
     xmin, fmin = result[np.argmin(_[1] for _ in result)]
 
     # return the values (negate if we're finding a max)
-    return xmin, -fmin if max else fmin
+    return xmin, -fmin if maximize else fmin
