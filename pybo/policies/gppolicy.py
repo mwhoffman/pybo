@@ -114,7 +114,7 @@ class GPPolicy(Policy):
     def get_next(self, return_index=False):
         # pylint: disable=arguments-differ
         index = self._policy(self._model)
-        xnext, _ = self._solver(index, self._bounds, max=True)
+        xnext, _ = self._solver(index, self._bounds, maximize=True)
         return (xnext, index) if return_index else xnext
 
     def get_best(self):
@@ -126,5 +126,5 @@ class GPPolicy(Policy):
                 return self._model.posterior(X)[0]
         Xtest, _ = self._model.data
         xbest, _ = globalopt.solve_lbfgs(objective, self._bounds, xx=Xtest,
-                                         max=True)
+                                         maximize=True)
         return xbest

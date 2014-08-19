@@ -6,28 +6,7 @@ URL = 'http://github.com/mwhoffman/pybo2'
 DESCRIPTION = 'A python library for Bayesian (and bandit) optimization'
 
 
-from setuptools import setup, find_packages, Extension
-from numpy.distutils.misc_util import get_numpy_include_dirs
-import os, subprocess
-
-
-class SimpleExtension(Extension):
-    def __init__(self, *sources):
-        psources = []
-        for source in sources:
-            name, ext = os.path.splitext(source)
-            if ext == '.pyx':
-                subprocess.call(['cython', source])
-                psources.append(name + '.c')
-            else:
-                psources.append(source)
-
-        name, ext = os.path.splitext(psources[0])
-        name = name.replace(os.path.sep, '.')
-
-        Extension.__init__(self, name,
-                           sources=psources,
-                           include_dirs=get_numpy_include_dirs())
+from setuptools import setup, find_packages
 
 
 if __name__ == '__main__':
@@ -38,8 +17,4 @@ if __name__ == '__main__':
         author_email=AUTHOR_EMAIL,
         description=DESCRIPTION,
         url=URL,
-        zip_safe=False,
-        packages=find_packages(),
-        ext_modules=[
-            SimpleExtension('pybo/globalopt/direct.pyx'),
-        ])
+        packages=find_packages())
