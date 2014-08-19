@@ -1,5 +1,5 @@
 """
-Acquisition functions for Bayesian optimization with GPs.
+Simple/common acquisition functions.
 """
 
 # future imports

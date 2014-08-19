@@ -18,7 +18,7 @@ import pygp.meta
 # local imports
 from ._base import Policy
 from .. import globalopt
-from . import gpacquisition
+from . import acquisitions
 
 # exported symbols
 __all__ = ['GPPolicy']
@@ -45,7 +45,7 @@ def _make_dict(module, lstrip='', rstrip=''):
 
 MODELS = _make_dict(pygp.meta)
 SOLVERS = _make_dict(globalopt, lstrip='solve_')
-POLICIES = _make_dict(gpacquisition)
+POLICIES = _make_dict(acquisitions)
 
 
 #### DEFINE THE META POLICY ###################################################
