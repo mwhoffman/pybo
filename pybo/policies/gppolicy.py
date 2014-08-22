@@ -79,6 +79,10 @@ class GPPolicy(Policy):
                     sf=pygp.priors.Uniform(0.01, 5.0),
                     ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
 
+        else:
+            gp = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise),
+                                        kernel)
+
         if inference is not 'fixed' and prior is None:
             raise Exception('a prior must be specified for models with'
                             'hyperparameter inference and non-default kernels')
