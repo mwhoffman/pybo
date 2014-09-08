@@ -1,6 +1,7 @@
 """
-Wrapper class for simple GP-based policies whose acquisition functions are
-simple functions of the posterior sufficient statistics.
+Solver method for GP-based optimization which uses an inner-loop optimizer to
+maximize some acquisition function, generally given as a simple function of the
+posterior sufficient statistics.
 """
 
 # future imports
@@ -10,11 +11,7 @@ from __future__ import print_function
 
 # global imports
 import numpy as np
-import numpy.lib.recfunctions as rec
-
-# not "exactly" local, but...
 import pygp
-import pygp.meta
 
 # local imports
 from .. import globalopt
@@ -24,7 +21,7 @@ from . import acquisitions
 __all__ = ['solve_bayesopt']
 
 
-### ENUMERATE POSSIBLE META POLICY COMPONENTS #################################
+### HELPERS ###################################################################
 
 def _make_dict(module, lstrip='', rstrip=''):
     """
@@ -43,13 +40,6 @@ def _make_dict(module, lstrip='', rstrip=''):
             yield fname, f
     return dict(generator())
 
-MODELS = _make_dict(pygp.meta)
-SOLVERS = _make_dict(globalopt, lstrip='solve_')
-POLICIES = _make_dict(acquisitions)
-
-
-#### DEFINE THE META POLICY ###################################################
-
 
 def _get_best(model, bounds):
     """
@@ -57,6 +47,7 @@ def _get_best(model, bounds):
     with maximum posterior mean.
     """
     def mu(X, grad=False):
+        """Posterior mean objective function."""
         if grad:
             return model.posterior(X, True)[::2]
         else:
@@ -65,6 +56,15 @@ def _get_best(model, bounds):
     xbest, _ = globalopt.solve_lbfgs(mu, bounds, xx=xinit, maximize=True)
     return xbest
 
+
+### SOLVER COMPONENTS #########################################################
+
+MODELS = _make_dict(pygp.meta)
+SOLVERS = _make_dict(globalopt, lstrip='solve_')
+POLICIES = _make_dict(acquisitions)
+
+
+### THE BAYESOPT META SOLVER ##################################################
 
 def solve_bayesopt(f,
                    bounds,
@@ -79,27 +79,32 @@ def solve_bayesopt(f,
     """
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
-    d = len(bounds)
 
-    # initialize the datastructure containing additional info.
-    info = np.zeros(T, [('x', np.float, (d,)),
-                        ('y', np.float),
-                        ('xbest', np.float, (d,)),
-                        ('fbest', np.float)])
-
-    # initialize the policy components.
-    model = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise), kernel)
+    # grab the policy components (other than the model, which we'll initialize
+    # after observing any initial data).
     solver = SOLVERS[solver]
     policy = POLICIES[policy]
 
     # create a list of initial points to query. For now just initialize with a
     # single point in the center of the bounds.
-    init = [bounds.sum(axis=1) / 2.0]
+    X = [bounds.sum(axis=1) / 2.0]
+    Y = [f(x) for x in X]
 
-    for i, x in enumerate(init):
-        y = f(x)
-        model.add_data(x, y)
-        info[i] = (x, y, _get_best(model, bounds), np.nan)
+    model = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise), kernel)
+
+    # add data to our model.
+    model.add_data(X, Y)
+
+    # allocate a datastructure containing "convergence" info.
+    info = np.zeros(T, [('x', np.float, (len(bounds),)),
+                        ('y', np.float),
+                        ('xbest', np.float, (len(bounds),)),
+                        ('fbest', np.float)])
+
+    # initialize the data.
+    info[:] = np.nan
+    info['x'][:len(X)] = X
+    info['y'][:len(Y)] = Y
 
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
@@ -114,9 +119,11 @@ def solve_bayesopt(f,
         y = f(x)
         model.add_data(x, y)
 
+        # find our next recommendation and evaluate it if possible.
         xbest = _get_best(model, bounds)
         fbest = f.get_f(xbest[None])[0] if hasattr(f, 'get_f') else np.nan
 
+        # record everything.
         info[i] = (x, y, xbest, fbest)
 
     return info
