@@ -10,18 +10,18 @@ from __future__ import print_function
 
 # global imports
 import numpy as np
+import numpy.lib.recfunctions as rec
 
 # not "exactly" local, but...
 import pygp
 import pygp.meta
 
 # local imports
-from ._base import Policy
 from .. import globalopt
 from . import acquisitions
 
 # exported symbols
-__all__ = ['GPPolicy']
+__all__ = ['solve_bayesopt']
 
 
 ### ENUMERATE POSSIBLE META POLICY COMPONENTS #################################
@@ -50,85 +50,74 @@ POLICIES = _make_dict(acquisitions)
 
 #### DEFINE THE META POLICY ###################################################
 
-class GPPolicy(Policy):
+
+def _get_best(model, bounds):
     """
-    Meta-policy for GP-based Bayesian optimization.
+    Given a model return the best recommendation, corresponding to the point
+    with maximum posterior mean.
     """
-    def __init__(self, bounds, noise,
-                 kernel='matern3',
-                 solver='lbfgs',
-                 policy='ei',
-                 inference='fixed',
-                 prior=None):
-
-        # make sure the bounds are a 2d-array.
-        bounds = np.array(bounds, dtype=float, ndmin=2)
-
-        if isinstance(kernel, str):
-            # FIXME: come up with some sane initial hyperparameters.
-            sn = noise
-            sf = 1.0
-            ell = (bounds[:, 1] - bounds[:, 0]) / 10
-            gp = pygp.BasicGP(sn, sf, ell, kernel=kernel)
-
-            if prior is None:
-                # FIXME: this is not necessarily a good default prior, but it's
-                # useful for testing purposes for now.
-                prior = dict(
-                    sn=pygp.priors.Uniform(0.01, 1.0),
-                    sf=pygp.priors.Uniform(0.01, 5.0),
-                    ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
-
+    def mu(X, grad=False):
+        if grad:
+            return model.posterior(X, True)[::2]
         else:
-            gp = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise),
-                                        kernel)
+            return model.posterior(X)[0]
+    xinit, _ = model.data
+    xbest, _ = globalopt.solve_lbfgs(mu, bounds, xx=xinit, maximize=True)
+    return xbest
 
-        if inference is not 'fixed' and prior is None:
-            raise Exception('a prior must be specified for models with'
-                            'hyperparameter inference and non-default kernels')
 
-        # save all the bits of our meta-policy.
-        self._bounds = bounds
-        self._solver = SOLVERS[solver]
-        self._policy = POLICIES[policy]
+def solve_bayesopt(f,
+                   bounds,
+                   noise,
+                   kernel,
+                   solver='lbfgs',
+                   policy='ei',
+                   callback=None,
+                   T=100):
+    """
+    Maximize the given function using Bayesian Optimization.
+    """
+    # make sure the bounds are a 2d-array.
+    bounds = np.array(bounds, dtype=float, ndmin=2)
+    d = len(bounds)
 
-        if inference is 'fixed':
-            self._model = gp
-        else:
-            self._model = MODELS[inference](gp, prior, n=10)
+    # initialize the datastructure containing additional info.
+    info = np.zeros(T, [('x', np.float, (d,)),
+                        ('y', np.float),
+                        ('xbest', np.float, (d,))])
 
-        # FIXME: this is assuming that the inference methods all correspond to
-        # Monte Carlo estimators where the number of samples can be selected by
-        # a kwarg n. We probably want to have a default here for those type of
-        # models, but should allow this to be changed (probably via kwargs in
-        # GPPolicy).
+    # initialize the policy components.
+    model = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise), kernel)
+    solver = SOLVERS[solver]
+    policy = POLICIES[policy]
 
-    def add_data(self, x, y):
-        self._model.add_data(x, y)
+    # create a list of initial points to query. For now just initialize with a
+    # single point in the center of the bounds.
+    init = [bounds.sum(axis=1) / 2.0]
 
-    def get_init(self):
-        lo = self._bounds[:, 0]
-        wd = self._bounds[:, 1] - lo
+    for i, x in enumerate(init):
+        y = f(x)
+        model.add_data(x, y)
+        info[i] = (x, y, _get_best(model, bounds))
 
-        # this basic example just returns a single point centered at the middle
-        # of the bounded region.
-        init = lo + 0.5 * wd
-        return init[None]
+    for i in xrange(model.ndata, T):
+        # get the next point to evaluate.
+        index = policy(model)
+        x, _ = solver(index, bounds, maximize=True)
 
-    def get_next(self, return_index=False):
-        # pylint: disable=arguments-differ
-        index = self._policy(self._model)
-        xnext, _ = self._solver(index, self._bounds, maximize=True)
-        return (xnext, index) if return_index else xnext
+        # deal with any visualization.
+        if callback is not None:
+            callback(info[:i], x, f, model, bounds, index)
 
-    def get_best(self):
-        def objective(X, grad=False):
-            """Objective corresponding to the posterior mean."""
-            if grad:
-                return self._model.posterior(X, True)[::2]
-            else:
-                return self._model.posterior(X)[0]
-        Xtest, _ = self._model.data
-        xbest, _ = globalopt.solve_lbfgs(objective, self._bounds, xx=Xtest,
-                                         maximize=True)
-        return xbest
+        # make an observation and record it.
+        y = f(x)
+        model.add_data(x, y)
+        info[i] = (x, y, _get_best(model, bounds))
+
+    # if the function is an object with 'get_f' defined (for evaluating the
+    # true function) then grab this data and record it.
+    if hasattr(f, 'get_f'):
+        info = rec.append_fields(info, 'fstar', f.get_f(info['xbest']),
+                                 usemask=False)
+
+    return info
