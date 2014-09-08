@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     info = pybo.solve_bayesopt(f,
                                f.bounds,
-                               sigma,
+                               gp=gp,
                                policy='ei',
-                               kernel=gp._kernel.copy(),
+                               inference='fixed',
                                callback=callback)

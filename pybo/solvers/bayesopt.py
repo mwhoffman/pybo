@@ -71,12 +71,13 @@ POLICIES = _make_dict(policies)
 
 def solve_bayesopt(f,
                    bounds,
-                   noise,
-                   kernel,
                    solver='lbfgs',
                    policy='ei',
-                   callback=None,
-                   T=100):
+                   inference='mcmc',
+                   gp=None,
+                   prior=None,
+                   T=100,
+                   callback=None):
     """
     Maximize the given function using Bayesian Optimization.
     """
@@ -93,7 +94,29 @@ def solve_bayesopt(f,
     X = [bounds.sum(axis=1) / 2.0]
     Y = [f(x) for x in X]
 
-    model = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise), kernel)
+    if gp is None:
+        # FIXME: the following default prior (and initial hyperparameter
+        # setting) may not be the best in the world. But we can use X/Y to set
+        # this if we want.
+        sn = 1.0
+        sf = 1.0
+        ell = (bounds[:, 1] - bounds[:, 0]) / 10
+        gp = pygp.BasicGP(sn, sf, ell, kernel='matern3')
+        prior = dict(
+            sn=pygp.priors.Uniform(0.01, 1.0),
+            sf=pygp.priors.Uniform(0.01, 5.0),
+            ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
+
+    if inference is 'fixed':
+        model = gp.copy()
+
+    elif prior is None:
+        raise RuntimeError('cannot marginalize hyperparameters with no prior')
+
+    else:
+        # FIXME: this is assuming that the all inference methods correspond to
+        # some Monte Carlo estimator with kwarg n.
+        model = MODELS[inference](gp, prior, n=10)
 
     # add data to our model.
     model.add_data(X, Y)
