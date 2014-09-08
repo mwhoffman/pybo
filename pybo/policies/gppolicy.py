@@ -84,7 +84,8 @@ def solve_bayesopt(f,
     # initialize the datastructure containing additional info.
     info = np.zeros(T, [('x', np.float, (d,)),
                         ('y', np.float),
-                        ('xbest', np.float, (d,))])
+                        ('xbest', np.float, (d,)),
+                        ('fbest', np.float)])
 
     # initialize the policy components.
     model = pygp.inference.ExactGP(pygp.likelihoods.Gaussian(noise), kernel)
@@ -98,7 +99,7 @@ def solve_bayesopt(f,
     for i, x in enumerate(init):
         y = f(x)
         model.add_data(x, y)
-        info[i] = (x, y, _get_best(model, bounds))
+        info[i] = (x, y, _get_best(model, bounds), np.nan)
 
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
@@ -112,12 +113,10 @@ def solve_bayesopt(f,
         # make an observation and record it.
         y = f(x)
         model.add_data(x, y)
-        info[i] = (x, y, _get_best(model, bounds))
 
-    # if the function is an object with 'get_f' defined (for evaluating the
-    # true function) then grab this data and record it.
-    if hasattr(f, 'get_f'):
-        info = rec.append_fields(info, 'fstar', f.get_f(info['xbest']),
-                                 usemask=False)
+        xbest = _get_best(model, bounds)
+        fbest = f.get_f(xbest[None])[0] if hasattr(f, 'get_f') else np.nan
+
+        info[i] = (x, y, xbest, fbest)
 
     return info
