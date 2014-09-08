@@ -53,6 +53,7 @@ def callback(info, x, f, model, bounds, index):
     pl.gca().set_xticklabels([])
     pl.gca().set_yticklabels([])
     pl.draw()
+    pl.show(block=False)
 
 
 if __name__ == '__main__':
@@ -67,3 +68,7 @@ if __name__ == '__main__':
                                policy='ei',
                                inference='fixed',
                                callback=callback)
+
+    # this makes sure that if we run the demo from the command line that it
+    # stops on the final plot before closing.
+    pl.show()
