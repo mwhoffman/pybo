@@ -59,7 +59,7 @@ if __name__ == '__main__':
     T = 100
     sigma = 0.05
     gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern3')
-    f = pybo.models.GPModel([3, 5], gp)
+    f = pybo.functions.GPModel([3, 5], gp)
 
     info = pybo.solve_bayesopt(f,
                                f.bounds,

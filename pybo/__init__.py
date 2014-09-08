@@ -6,7 +6,7 @@ Objects which global optimization solvers.
 from .solvers import *
 
 from . import solvers
-from . import models
+from . import functions
 
 __all__ = []
 __all__ += solvers.__all__
