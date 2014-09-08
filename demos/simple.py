@@ -8,8 +8,7 @@ import matplotlib.pyplot as pl
 
 import pygp
 import pygp.plotting as pp
-import pybo.models
-import pybo.policies
+import pybo
 
 
 def callback(info, x, f, model, bounds, index):
@@ -62,9 +61,9 @@ if __name__ == '__main__':
     gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern3')
     f = pybo.models.GPModel([3, 5], gp)
 
-    info = pybo.policies.solve_bayesopt(f,
-                                        f.bounds,
-                                        sigma,
-                                        policy='ei',
-                                        kernel=gp._kernel.copy(),
-                                        callback=callback)
+    info = pybo.solve_bayesopt(f,
+                               f.bounds,
+                               sigma,
+                               policy='ei',
+                               kernel=gp._kernel.copy(),
+                               callback=callback)

@@ -13,9 +13,12 @@ from __future__ import print_function
 import numpy as np
 import pygp
 
-# local imports
+# each method/class defined exported by these modules will be exposed as a
+# string to the solve_bayesopt method so that we can swap in/out different
+# components for the "meta" solver.
+from pygp import meta as models
 from .. import globalopt
-from . import acquisitions
+from . import policies
 
 # exported symbols
 __all__ = ['solve_bayesopt']
@@ -59,9 +62,9 @@ def _get_best(model, bounds):
 
 ### SOLVER COMPONENTS #########################################################
 
-MODELS = _make_dict(pygp.meta)
+MODELS = _make_dict(models)
 SOLVERS = _make_dict(globalopt, lstrip='solve_')
-POLICIES = _make_dict(acquisitions)
+POLICIES = _make_dict(policies)
 
 
 ### THE BAYESOPT META SOLVER ##################################################
