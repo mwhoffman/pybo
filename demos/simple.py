@@ -1,71 +1,74 @@
+"""
+Simple demo which performs Bayesian optimization on a single objective function
+and visualizes the search process while doing so.
+"""
+
 import numpy as np
 import matplotlib.pyplot as pl
 
 import pygp
-import pygp.plotting
-
-import pybo.models
-import pybo.policies
+import pygp.plotting as pp
+import pybo
 
 
-def run_model(model, policy, T):
-    xmin = model.bounds[0, 0]
-    xmax = model.bounds[0, 1]
+def callback(info, x, f, model, bounds, index):
+    """
+    Plot the current posterior and the index.
+    """
+    xmin = bounds[0, 0]
+    xmax = bounds[0, 1]
 
-    X = np.linspace(xmin, xmax, 200)[:, None]
-    f = model.get_f(X)
-
-    ymin, ymax = f.min(), f.max()
+    X = np.linspace(xmin, xmax, 500)[:, None]
+    F = f.get_f(X)
+    ymin, ymax = F.min(), F.max()
     ymin -= 0.2 * (ymax - ymin)
-    ymax += 0.4 * (ymax - ymin)
-
-    # get any initial points.
-    for x in policy.get_init():
-        y = model(x)
-        policy.add_data(x, y)
+    ymax += 0.2 * (ymax - ymin)
 
     pl.figure(1)
-    pl.show()
+    pl.clf()
+    pl.subplot(221)
+    pp.plot_posterior(model, xmin=xmin, xmax=xmax)
+    pl.plot(X, F, 'k--', lw=2)
+    pl.axvline(x, color='r')
+    pl.axvline(info[-1]['xbest'], color='g')
+    pl.axis((xmin, xmax, ymin, ymax))
+    pl.gca().set_xticklabels([])
+    pl.gca().set_yticklabels([])
+    pl.ylabel('posterior')
 
-    for _ in xrange(T):
-        x, index = policy.get_next(return_index=True)
+    pl.subplot(223)
+    pl.plot(X, index(X), lw=2)
+    pl.axvline(x, color='r')
+    pl.axis(xmin=xmin, xmax=xmax)
+    pl.gca().set_xticklabels([])
+    pl.gca().set_yticklabels([])
+    pl.xlabel('input')
+    pl.ylabel('acquisition')
 
-        pygp.plotting.plot(policy._model, xmin=xmin, xmax=xmax,
-                           ymin=ymin, ymax=ymax,
-                           subplot=211, draw=False)
-
-        pl.plot(X, model.get_f(X), 'k--', lw=2)
-        pl.axvline(x, color='r')
-        pl.axvline(policy.get_best(), color='g')
-        pl.ylabel('posterior')
-        pl.gca().set_xticklabels([])
-        pl.gca().set_yticklabels([])
-
-        pl.subplot(212)
-        pl.cla()
-        pl.plot(X, index(X), lw=2)
-        pl.axvline(x, color='r')
-        pl.axis(xmin=xmin, xmax=xmax)
-        pl.ylabel('acquisition')
-        pl.gca().set_xticklabels([])
-        pl.gca().set_yticklabels([])
-        pl.draw()
-
-        y = model(x)
-        policy.add_data(x, y)
+    pl.subplot(122)
+    pl.plot(info['fbest'], lw=2)
+    pl.axis('tight')
+    pl.xlabel('iterations')
+    pl.ylabel('value of recommendation')
+    pl.gca().set_xticklabels([])
+    pl.gca().set_yticklabels([])
+    pl.draw()
+    pl.show(block=False)
 
 
 if __name__ == '__main__':
     T = 100
     sigma = 0.05
-    gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern1')
-    model = pybo.models.GPModel([3, 5], gp)
+    gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern3')
+    f = pybo.functions.GPModel([3, 5], gp)
 
-    policy = pybo.policies.GPPolicy(model.bounds,
-                                    kernel=gp._kernel.copy(),
-                                    noise=sigma,
-                                    policy='ucb',
-                                    solver='lbfgs',
-                                    inference='fixed')
+    info = pybo.solve_bayesopt(f,
+                               f.bounds,
+                               gp=gp,
+                               policy='ei',
+                               inference='fixed',
+                               callback=callback)
 
-    run_model(model, policy, T)
+    # this makes sure that if we run the demo from the command line that it
+    # stops on the final plot before closing.
+    pl.show()

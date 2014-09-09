@@ -39,9 +39,6 @@ class GOModel(object):
         # problems, hence we have to negate them.
         return -self._f(np.array(X, ndmin=2, copy=False))
 
-    def get_regret(self, X):
-        return np.clip(self.fmax - self.get_f(X), 0.0, np.inf)
-
 
 def _cleanup(cls):
     """

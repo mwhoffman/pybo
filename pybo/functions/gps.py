@@ -17,9 +17,6 @@ from ..utils.random import rstate
 __all__ = ['GPModel']
 
 
-# FIXME: GPModel is broken now. needs to be fixed.
-
-
 class GPModel(object):
     """
     Model representing draws from a zero-mean GP prior with the given kernel.

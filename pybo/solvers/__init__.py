@@ -3,8 +3,9 @@ Objects which global optimization solvers.
 """
 
 # pylint: disable=wildcard-import
-from .gppolicy import *
-from . import gppolicy
+from .bayesopt import *
+
+from . import bayesopt
 
 __all__ = []
-__all__ += gppolicy.__all__
+__all__ += bayesopt.__all__
