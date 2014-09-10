@@ -64,9 +64,8 @@ if __name__ == '__main__':
 
     info = pybo.solve_bayesopt(f,
                                f.bounds,
-                               gp=gp,
                                policy='ei',
-                               inference='fixed',
+                               inference='mcmc',
                                callback=callback)
 
     # this makes sure that if we run the demo from the command line that it

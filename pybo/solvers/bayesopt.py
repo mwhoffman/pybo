@@ -98,14 +98,14 @@ def solve_bayesopt(f,
         # FIXME: the following default prior (and initial hyperparameter
         # setting) may not be the best in the world. But we can use X/Y to set
         # this if we want.
-        sn = 1.0
-        sf = 1.0
+        sn, sf, mu = 1.0, 1.0, 0.0
         ell = (bounds[:, 1] - bounds[:, 0]) / 10
-        gp = pygp.BasicGP(sn, sf, ell, kernel='matern3')
-        prior = dict(
-            sn=pygp.priors.Uniform(0.01, 1.0),
-            sf=pygp.priors.Uniform(0.01, 5.0),
-            ell=pygp.priors.Uniform([0.01]*len(ell), 2*ell))
+        gp = pygp.BasicGP(sn, sf, ell, mu, kernel='matern3')
+        prior = {
+            'sn': pygp.priors.Uniform(0.01, 1.0),
+            'sf': pygp.priors.Uniform(0.01, 5.0),
+            'ell': pygp.priors.Uniform(np.full_like(ell, 0.01), 2*ell),
+            'mu': pygp.priors.Uniform(-10, 10)}
 
     if inference is 'fixed':
         model = gp.copy()

@@ -62,13 +62,13 @@ def callback(info, x, f, model, bounds, index):
 
 if __name__ == '__main__':
     T = 100
-    sigma = 1e-6
+    sigma = 1e-1
     gp = pygp.BasicGP(sigma, 1.0, 0.1, ndim=2, kernel='matern3')
     f = pybo.functions.Branin(sigma)
 
     info = pybo.solve_bayesopt(f,
                                f.bounds,
-                               policy='ucb',
+                               policy='ei',
                                inference='smc',
                                callback=callback)
 
