@@ -22,11 +22,11 @@ try:
     def solve_direct(f, bounds, maximize=False):
         def objective(x, grad):
             """Objective function in the form required by nlopt."""
-            if grad is None:
-                fx = f(x[None], grad=False)
-            else:
+            if grad.size > 0:
                 fx, gx = f(x[None], grad=True)
                 grad[:] = gx[0][:]
+            else:
+                fx = f(x[None], grad=False)
             return fx[0]
 
         bounds = np.array(bounds, ndmin=2)
