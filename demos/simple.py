@@ -65,6 +65,7 @@ if __name__ == '__main__':
     info = pybo.solve_bayesopt(f,
                                f.bounds,
                                policy='ei',
+                               recommender='incumbent',
                                inference='mcmc',
                                callback=callback)
 

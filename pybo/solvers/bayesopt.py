@@ -13,13 +13,6 @@ from __future__ import print_function
 import numpy as np
 import pygp
 
-# each method/class defined exported by these modules will be exposed as a
-# string to the solve_bayesopt method so that we can swap in/out different
-# components for the "meta" solver.
-from pygp import meta as models
-from .. import globalopt
-from . import policies
-
 # exported symbols
 __all__ = ['solve_bayesopt']
 
@@ -44,27 +37,20 @@ def _make_dict(module, lstrip='', rstrip=''):
     return dict(generator())
 
 
-def _get_best(model, bounds):
-    """
-    Given a model return the best recommendation, corresponding to the point
-    with maximum posterior mean.
-    """
-    def mu(X, grad=False):
-        """Posterior mean objective function."""
-        if grad:
-            return model.posterior(X, True)[::2]
-        else:
-            return model.posterior(X)[0]
-    xinit, _ = model.data
-    xbest, _ = globalopt.solve_lbfgs(mu, bounds, xx=xinit, maximize=True)
-    return xbest
-
-
 ### SOLVER COMPONENTS #########################################################
+
+# each method/class defined exported by these modules will be exposed as a
+# string to the solve_bayesopt method so that we can swap in/out different
+# components for the "meta" solver.
+from pygp import meta as models
+from .. import globalopt
+from . import policies
+from . import recommenders
 
 MODELS = _make_dict(models)
 SOLVERS = _make_dict(globalopt, lstrip='solve_')
 POLICIES = _make_dict(policies)
+RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 
 
 ### THE BAYESOPT META SOLVER ##################################################
@@ -74,6 +60,7 @@ def solve_bayesopt(f,
                    solver='lbfgs',
                    policy='ei',
                    inference='mcmc',
+                   recommender='latent',
                    gp=None,
                    prior=None,
                    T=100,
@@ -88,6 +75,7 @@ def solve_bayesopt(f,
     # after observing any initial data).
     solver = SOLVERS[solver]
     policy = POLICIES[policy]
+    recommender = RECOMMENDERS[recommender]
 
     # create a list of initial points to query. For now just initialize with a
     # single point in the center of the bounds.
@@ -146,7 +134,7 @@ def solve_bayesopt(f,
         model.add_data(x, y)
 
         # find our next recommendation and evaluate it if possible.
-        xbest = _get_best(model, bounds)
+        xbest = recommender(model, bounds)
         fbest = f.get_f(xbest[None])[0] if hasattr(f, 'get_f') else np.nan
 
         # record everything.

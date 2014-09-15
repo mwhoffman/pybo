@@ -11,7 +11,7 @@ import pygp.plotting as pp
 import pybo
 
 
-def callback(info, x, f, model, bounds, index):
+def callback(info, x, f, model, _, index):
     """
     Plot the current posterior and the index.
     """
@@ -94,7 +94,8 @@ if __name__ == '__main__':
                                gp=gp,
                                prior=prior,
                                policy='ei',
-                               inference='smc',
+                               recommender='incumbent',
+                               inference='mcmc',
                                callback=callback)
 
     # this makes sure that if we run the demo from the command line that it
