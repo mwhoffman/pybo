@@ -16,109 +16,124 @@ import scipy.stats as ss
 __all__ = []
 
 
-def run_ep(m0, V0, ymin, sn2):
-    # initial marginal approximation to our posterior given the zeroed factors
-    # given below. note we're working with the "natural" parameters.
-    tau = 1. / V0.diagonal()
-    rho = m0 / V0.diagonal()
+def get_latent(m0, v0, ymin, sn2):
+    """
+    Given a Gaussian (m0, v0) for the latent minimizer value return an
+    approximate Gaussian posterior (m, v) subject to the constraint the value
+    is less than ymin, where the noise varaince sn2 is used to soften this
+    constraint.
+    """
+    s = np.sqrt(v0 + sn2)
+    t = ymin - m0
+    u = -1
 
-    # the current approximate factors.
-    tauHat = np.zeros_like(tau)
-    rhoHat = np.zeros_like(rho)
+    alpha = t / s
+    ratio = np.exp(ss.norm.logpdf(alpha) - ss.norm.logcdf(alpha))
+    beta = ratio * (alpha + ratio) / s / s
+    kappa = u * (t / s + ratio) / s
 
-    # we won't do any damping at first.
-    damping = 1
+    m = m0 + 1. / kappa
+    v = (1 - beta*v0) / beta
 
-    while True:
-        # eliminate the contribution of the approximate factor.
-        v = (tau - tauHat) ** -1
-        m = v * (rho - rhoHat)
-
-        s = np.sqrt(v + sn2)
-        t = ymin - m
-        u = -1
-
-        alpha = t / s
-        ratio = np.exp(ss.norm.logpdf(alpha) - ss.norm.logcdf(alpha))
-        beta = ratio * (alpha + ratio) / s / s
-        kappa = u * (t / s + ratio) / s
-
-        tauHatNew = beta / (1 - beta*v)
-        tauHatNew[np.abs(tauHatNew) < 1e-300] = 1e-300
-        rhoHatNew = (m + 1 / kappa) * tauHatNew
-
-        # don't change anything that ends up with a negative variance.
-        negv = (v < 0)
-        tauHatNew[negv] = tauHat[negv]
-        rhoHatNew[negv] = rhoHat[negv]
-
-        while True:
-            # mix between the new factors and the old ones. NOTE: in the first
-            # iteration damping is 1, so this doesn't do any damping.
-            tauHatNew = tauHatNew * damping + tauHat * (1-damping)
-            rhoHatNew = rhoHatNew * damping + rhoHat * (1-damping)
-
-            # get the eigenvalues of the new posterior covariance and mix more
-            # with the old approximation if they're blowing up.
-            vals, _ = np.linalg.eig(np.diag(1/tauHatNew) + V0)
-
-            if any(1/vals <= 1e-10):
-                damping *= 0.5
-            else:
-                break
-
-        # our new approximate factors.
-        tauHat = tauHatNew
-        rhoHat = rhoHatNew
-
-        # the new posterior.
-        R = sla.cholesky(V0 + np.diag(1/tauHat))
-        V = sla.solve_triangular(R, V0, trans=True)
-        V = V0 - np.dot(V.T, V)
-        m = np.dot(V, rhoHat) + sla.cho_solve((R, False), m0) / tauHat
-
-        if np.max(np.abs(np.r_[V.diagonal() - 1/tau, m - rho/tau])) >= 1e-6:
-            tau = 1 / V.diagonal()
-            rho = m / V.diagonal()
-            damping *= 0.99
-        else:
-            break
-
-    vHat = 1 / tauHat
-    mHat = rhoHat / tauHat
-
-    return mHat, vHat
+    return m, v
 
 
-def predict(gp, xstar):
-    X, y = gp.data
+# NOTE: the following function is also implemented in pygp, and now might be a
+# reasonable time to move some of these really common tasks to a third
+# repository. Maybe.
 
-    # get the noise variance.
-    sn2 = gp._likelihood.s2
+def chol_update(A, B, C, a, b):
+    """
+    Update the cholesky decomposition of a growing matrix.
+
+    Let `A` denote a cholesky decomposition of some matrix and `a` the inverse
+    of `A` applied to some vector `y`. This computes the cholesky to a new
+    matrix which has additional elements `B` and the non-diagonal and `C` on
+    the diagonal block. It also computes the solution to the application of the
+    inverse where the vector has additional elements `b`.
+    """
+    n = A.shape[0]
+    m = C.shape[0]
+
+    B = sla.solve_triangular(A, B, trans=True)
+    C = sla.cholesky(C - np.dot(B.T, B))
+    c = np.dot(B.T, a)
+
+    # grow the new cholesky and use then use this to grow the vector a.
+    A = np.r_[np.c_[A, B], np.c_[np.zeros((m, n)), C]]
+    a = np.r_[a, sla.solve_triangular(C, b-c, trans=True)]
+
+    return A, a
+
+
+def predict(gp, xstar, Xtest):
+    """
+    Given a GP posterior and a sampled location xstar return marginal
+    predictions at Xtest conditioned on the fact that xstar is a minimizer.
+    """
+    kernel, sn2, mean, (X, y) = (gp._kernel, gp._likelihood.s2, gp._mean,
+                                 gp.data)
+
+    # format the optimum location as a (1,d) array.
+    Z = xstar[None]
 
     # construct the kernel matrix evaluated on our observed data c = [y; g]
-    Ky = gp._kernel.get(X) + sn2 * np.eye(X.shape[0])
-    Kyg = gp._kernel.grady(X, xstar[None])[:, 0, :]
-    Kg = gp._kernel.gradxy(xstar[None], xstar[None])[0, 0]
-    Kc = np.r_[np.c_[Ky, Kyg], np.c_[Kyg.T, Kg]]
+    Kxx = kernel.get(X) + sn2 * np.eye(X.shape[0])
+    Kxg = kernel.grady(X, Z)[:, 0, :]
+    Kgg = kernel.gradxy(Z, Z)[0, 0]
 
-    # construct the full kernel matrix. and get the sufficient statistics for
-    # our posterior. Note that this ignores whatever inference method the GP is
-    # using and performs exact inference.
-    R = sla.cholesky(Kc)
-    c = np.r_[y-gp._mean, np.zeros_like(xstar)]
+    # evaluate the kernel between the latent optimum z and the constraints c
+    Kzz = kernel.get(Z)
+    Kzc = np.c_[
+        kernel.get(Z, X),
+        kernel.grady(Z, Z)[0]]
+
+    # get the sufficient statistics for our posterior. Note that this ignores
+    # whatever inference method the GP is using and performs exact inference.
+    R = sla.cholesky(np.r_[np.c_[Kxx, Kxg], np.c_[Kxg.T, Kgg]])
+    c = np.r_[y-mean, np.zeros_like(xstar)]
     a = sla.solve_triangular(R, c, trans=True)
 
-    # evaluate the kernel at our maximizer.
-    Kzc = np.c_[
-        gp._kernel.get(xstar[None], X),
-        gp._kernel.grady(xstar[None], xstar[None])[0]]
-
     # get the mean and covariance of z given c.
-    V = sla.solve_triangular(R, Kzc.T, trans=True)
-    m0 = gp._mean + np.dot(V.T, a)
-    V0 = gp._kernel.get(xstar[None]) - np.dot(V.T, V)
+    B = sla.solve_triangular(R, Kzc.T, trans=True)
+    m0 = float(np.dot(B.T, a))
+    v0 = float(Kzz - np.dot(B.T, B))
 
-    mHat, vHat = run_ep(m0, V0, min(gp.data[1]), gp._likelihood.s2)
+    # get the approximate factors and use this to update the cholesky, which
+    # should now be wrt the covariance between [y; g; f(z)].
+    m, v = get_latent(m0, v0, min(y-mean), sn2)
+    R, a = chol_update(R, Kzc.T, Kzz + v, a, m)
 
-    return m0, V0, mHat, vHat
+    # get predictions at the optimum.
+    Bstar = sla.solve_triangular(R, np.c_[Kzc, Kzz].T, trans=True)
+    mustar = float(np.dot(Bstar.T, a))
+    s2star = float(kernel.dget(Z) - np.sum(Bstar**2, axis=0))
+
+    # evaluate the covariance between our test points and both the analytic
+    # constraints and z.
+    Ktc = np.c_[
+        kernel.get(Xtest, X),
+        kernel.grady(Xtest, Z)[:, 0],
+        kernel.get(Xtest, Z)]
+
+    # get the marginal posterior without the constraint that the function at
+    # the optimum is better than the function at test points.
+    B = sla.solve_triangular(R, Ktc.T, trans=True)
+    mu = np.dot(B.T, a)
+    s2 = kernel.dget(Xtest) - np.sum(B**2, axis=0)
+
+    # the covariance between each test point and xstar.
+    rho = Ktc[:, -1] - np.dot(B.T, Bstar).flatten()
+    s = s2 + s2star - 2*rho
+
+    while any(s < 1e-10):
+        rho[s < 1e-10] *= 1 - 1e-4
+        s = s2 + s2star - 2*rho
+
+    a = (mu - mustar) / np.sqrt(s)
+    b = np.exp(ss.norm.logpdf(a) - ss.norm.logcdf(a))
+
+    mu += mean + b * (s2 - rho) / np.sqrt(s)
+    s2 -= b * (b + a) * (s2 - rho)**2 / s
+
+    return mu, s2
