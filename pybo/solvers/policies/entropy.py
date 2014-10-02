@@ -16,21 +16,20 @@ import scipy.stats as ss
 __all__ = []
 
 
-def get_latent(m0, v0, ymin, sn2):
+def get_latent(m0, v0, ymax, sn2):
     """
     Given a Gaussian (m0, v0) for the latent minimizer value return an
     approximate Gaussian posterior (m, v) subject to the constraint the value
-    is less than ymin, where the noise varaince sn2 is used to soften this
+    is greater than ymax, where the noise varaince sn2 is used to soften this
     constraint.
     """
     s = np.sqrt(v0 + sn2)
-    t = ymin - m0
-    u = -1
+    t = m0 - ymax
 
     alpha = t / s
     ratio = np.exp(ss.norm.logpdf(alpha) - ss.norm.logcdf(alpha))
     beta = ratio * (alpha + ratio) / s / s
-    kappa = u * (t / s + ratio) / s
+    kappa = (alpha + ratio) / s
 
     m = m0 + 1. / kappa
     v = (1 - beta*v0) / beta
@@ -102,7 +101,7 @@ def predict(gp, xstar, Xtest):
 
     # get the approximate factors and use this to update the cholesky, which
     # should now be wrt the covariance between [y; g; f(z)].
-    m, v = get_latent(m0, v0, min(y), sn2)
+    m, v = get_latent(m0, v0, max(y), sn2)
     R, a = chol_update(R, Kzc.T, Kzz + v, a, m - mean)
 
     # get predictions at the optimum.
@@ -124,6 +123,7 @@ def predict(gp, xstar, Xtest):
     mu = mean + np.dot(B.T, a)
     s2 = kernel.dget(Xtest) - np.sum(B**2, axis=0)
 
+    """
     # the covariance between each test point and xstar.
     rho = Ktc[:, -1] - np.dot(B.T, Bstar).flatten()
     s = s2 + s2star - 2*rho
@@ -137,5 +137,6 @@ def predict(gp, xstar, Xtest):
 
     mu += b * (s2 - rho) / np.sqrt(s)
     s2 -= b * (b + a) * (s2 - rho)**2 / s
+    """
 
-    return mu, s2
+    return mu, s2, m, v
