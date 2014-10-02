@@ -123,7 +123,6 @@ def predict(gp, xstar, Xtest):
     mu = mean + np.dot(B.T, a)
     s2 = kernel.dget(Xtest) - np.sum(B**2, axis=0)
 
-    """
     # the covariance between each test point and xstar.
     rho = Ktc[:, -1] - np.dot(B.T, Bstar).flatten()
     s = s2 + s2star - 2*rho
@@ -132,11 +131,10 @@ def predict(gp, xstar, Xtest):
         rho[s < 1e-10] *= 1 - 1e-4
         s = s2 + s2star - 2*rho
 
-    a = (mu - mustar) / np.sqrt(s)
+    a = (mustar - mu) / np.sqrt(s)
     b = np.exp(ss.norm.logpdf(a) - ss.norm.logcdf(a))
 
-    mu += b * (s2 - rho) / np.sqrt(s)
-    s2 -= b * (b + a) * (s2 - rho)**2 / s
-    """
+    mu += b * (rho - s2) / np.sqrt(s)
+    s2 -= b * (b + a) * (rho - s2)**2 / s
 
-    return mu, s2, m, v
+    return mu, s2

@@ -11,7 +11,7 @@ if __name__ == '__main__':
     rng = pygp.utils.random.rstate(0)
     X = rng.rand(20, 1)
     y = gp.sample(X, latent=False, rng=rng)
-    z = np.array([0.57])
+    z = np.array([0.8])
 
     gp = pygp.BasicGP(sn=0.1, ell=0.25, sf=1)
     gp.add_data(X, y)
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     er_ = 2*np.sqrt(s2_)
 
     # get the "posterior" predictions.
-    mu, s2, m, v = entropy.predict(gp, z, Xtest)
+    mu, s2 = entropy.predict(gp, z, Xtest)
     er = 2*np.sqrt(s2)
 
     pl.figure(1)
@@ -40,7 +40,6 @@ if __name__ == '__main__':
     pl.plot(xx, mu, color=color, lw=2, label='posterior')
     pl.fill_between(xx, mu+er, mu-er, color=color, alpha=0.15)
 
-    pl.errorbar(z, m, 2*np.sqrt(v), label='optimizer')
     pl.scatter(X, y, label='data', marker='o', facecolors='none', s=30, lw=1,
                color='k', zorder=3)
 
