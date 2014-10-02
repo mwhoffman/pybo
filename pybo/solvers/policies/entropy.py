@@ -77,36 +77,37 @@ def predict(gp, xstar, Xtest):
     # format the optimum location as a (1,d) array.
     Z = xstar[None]
 
-    # construct the kernel matrix evaluated on our observed data c = [y; g]
+    # condition on our observations. NOTE: if this is an exact GP, then we've
+    # already computed these quantities.
     Kxx = kernel.get(X) + sn2 * np.eye(X.shape[0])
+    R = sla.cholesky(Kxx)
+    a = sla.solve_triangular(R, y-mean, trans=True)
+
+    # condition on the gradient being zero.
     Kxg = kernel.grady(X, Z)[:, 0, :]
     Kgg = kernel.gradxy(Z, Z)[0, 0]
+    R, a = chol_update(R, Kxg, Kgg, a, np.zeros_like(xstar))
 
-    # evaluate the kernel between the latent optimum z and the constraints c
+    # evaluate the kernel so we can test at the latent optimizer.
     Kzz = kernel.get(Z)
     Kzc = np.c_[
         kernel.get(Z, X),
-        kernel.grady(Z, Z)[0]]
+        kernel.grady(Z, Z)[0]
+    ]
 
-    # get the sufficient statistics for our posterior. Note that this ignores
-    # whatever inference method the GP is using and performs exact inference.
-    R = sla.cholesky(np.r_[np.c_[Kxx, Kxg], np.c_[Kxg.T, Kgg]])
-    c = np.r_[y-mean, np.zeros_like(xstar)]
-    a = sla.solve_triangular(R, c, trans=True)
-
-    # get the mean and covariance of z given c.
+    # make predictions at the optimizer.
     B = sla.solve_triangular(R, Kzc.T, trans=True)
-    m0 = float(np.dot(B.T, a))
+    m0 = mean + float(np.dot(B.T, a))
     v0 = float(Kzz - np.dot(B.T, B))
 
     # get the approximate factors and use this to update the cholesky, which
     # should now be wrt the covariance between [y; g; f(z)].
-    m, v = get_latent(m0, v0, min(y-mean), sn2)
-    R, a = chol_update(R, Kzc.T, Kzz + v, a, m)
+    m, v = get_latent(m0, v0, min(y), sn2)
+    R, a = chol_update(R, Kzc.T, Kzz + v, a, m - mean)
 
     # get predictions at the optimum.
     Bstar = sla.solve_triangular(R, np.c_[Kzc, Kzz].T, trans=True)
-    mustar = float(np.dot(Bstar.T, a))
+    mustar = mean + float(np.dot(Bstar.T, a))
     s2star = float(kernel.dget(Z) - np.sum(Bstar**2, axis=0))
 
     # evaluate the covariance between our test points and both the analytic
@@ -114,12 +115,13 @@ def predict(gp, xstar, Xtest):
     Ktc = np.c_[
         kernel.get(Xtest, X),
         kernel.grady(Xtest, Z)[:, 0],
-        kernel.get(Xtest, Z)]
+        kernel.get(Xtest, Z)
+    ]
 
     # get the marginal posterior without the constraint that the function at
     # the optimum is better than the function at test points.
     B = sla.solve_triangular(R, Ktc.T, trans=True)
-    mu = np.dot(B.T, a)
+    mu = mean + np.dot(B.T, a)
     s2 = kernel.dget(Xtest) - np.sum(B**2, axis=0)
 
     # the covariance between each test point and xstar.
@@ -133,7 +135,7 @@ def predict(gp, xstar, Xtest):
     a = (mu - mustar) / np.sqrt(s)
     b = np.exp(ss.norm.logpdf(a) - ss.norm.logcdf(a))
 
-    mu += mean + b * (s2 - rho) / np.sqrt(s)
+    mu += b * (s2 - rho) / np.sqrt(s)
     s2 -= b * (b + a) * (s2 - rho)**2 / s
 
     return mu, s2
