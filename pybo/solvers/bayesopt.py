@@ -43,6 +43,7 @@ def _make_dict(module, lstrip='', rstrip=''):
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
 from pygp import meta as models
+from ..utils import ldsample
 from .. import globalopt
 from . import policies
 from . import recommenders
@@ -64,12 +65,14 @@ def solve_bayesopt(f,
                    gp=None,
                    prior=None,
                    T=100,
+                   ninit=None,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
     """
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
+    dim = bounds.shape[0]
 
     # grab the policy components (other than the model, which we'll initialize
     # after observing any initial data).
@@ -77,9 +80,9 @@ def solve_bayesopt(f,
     policy = POLICIES[policy]
     recommender = RECOMMENDERS[recommender]
 
-    # create a list of initial points to query. For now just initialize with a
-    # single point in the center of the bounds.
-    X = [bounds.sum(axis=1) / 2.0]
+    # create a list of initial points to query.
+    ninit = 3*dim if (ninit is None) else ninit
+    X = ldsample.latin(bounds, ninit, 0)
     Y = [f(x) for x in X]
 
     if gp is None:
