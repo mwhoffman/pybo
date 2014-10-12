@@ -12,6 +12,7 @@ import numpy as np
 
 # local imports
 from ..utils.random import rstate
+from ..utils.ldsample import latin
 
 # exported symbols
 __all__ = ['GPModel']
@@ -29,15 +30,23 @@ class GPModel(object):
     """
     def __init__(self, bounds, gp, N=500, rng=None):
         self.bounds = np.array(bounds, dtype=float, ndmin=2)
+        self._gp = gp.copy()
         self._rng = rstate(rng)
-        self._f = gp.sample_fourier(N, self._rng)
-        self._likelihood = gp._likelihood.copy()
+
+        # generate some sampled observations.
+        X = latin(bounds, N, self._rng)
+        y = self._gp.sample(X, latent=False, rng=self._rng)
+
+        # add them back to get a new "posterior".
+        self._gp.add_data(X, y)
 
     def __call__(self, x):
         return self.get(x)[0]
 
     def get(self, X):
-        return self._likelihood.sample(self.get_f(X), self._rng)
+        return self._gp._likelihood.sample(self.get_f(X), self._rng)
 
     def get_f(self, X):
-        return self._f.get(np.array(X, ndmin=2, copy=False))
+        X = np.array(X, ndmin=2, copy=False)
+        f, _ = self._gp.posterior(X)
+        return f
