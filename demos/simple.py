@@ -59,7 +59,14 @@ def callback(info, x, f, model, bounds, index):
 if __name__ == '__main__':
     T = 100
     sigma = 0.05
-    gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern3')
+    mean = 0.0
+
+    likelihood = pygp.likelihoods.Gaussian(sigma)
+    kernel = \
+        pygp.kernels.Periodic(1, 1, 0.5) + \
+        pygp.kernels.SE(1, 1)
+
+    gp = pygp.inference.ExactGP(likelihood, kernel, mean)
     f = pybo.functions.GPModel([3, 5], gp)
 
     info = pybo.solve_bayesopt(f,
