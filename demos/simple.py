@@ -72,8 +72,9 @@ if __name__ == '__main__':
     info = pybo.solve_bayesopt(f,
                                f.bounds,
                                policy='ei',
-                               recommender='incumbent',
+                               init='latin',
                                inference='mcmc',
+                               recommender='incumbent',
                                callback=callback)
 
     # this makes sure that if we run the demo from the command line that it

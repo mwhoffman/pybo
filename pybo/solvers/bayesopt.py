@@ -44,11 +44,13 @@ def _make_dict(module, lstrip='', rstrip=''):
 # components for the "meta" solver.
 from pygp import meta as models
 from .. import globalopt
+from . import init
 from . import policies
 from . import recommenders
 
 MODELS = _make_dict(models)
 SOLVERS = _make_dict(globalopt, lstrip='solve_')
+INIT = _make_dict(init, lstrip='init_')
 POLICIES = _make_dict(policies)
 RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 
@@ -59,6 +61,7 @@ def solve_bayesopt(f,
                    bounds,
                    solver='lbfgs',
                    policy='ei',
+                   init='middle',
                    inference='mcmc',
                    recommender='latent',
                    gp=None,
@@ -77,9 +80,8 @@ def solve_bayesopt(f,
     policy = POLICIES[policy]
     recommender = RECOMMENDERS[recommender]
 
-    # create a list of initial points to query. For now just initialize with a
-    # single point in the center of the bounds.
-    X = [bounds.sum(axis=1) / 2.0]
+    # create a list of initial points to query.
+    X = INIT[init](bounds)
     Y = [f(x) for x in X]
 
     if gp is None:
