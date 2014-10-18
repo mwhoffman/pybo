@@ -18,7 +18,7 @@ __all__ = ['init_middle', 'init_latin']
 
 
 def init_middle(bounds):
-    return np.mean(bounds, axis=1)
+    return np.mean(bounds, axis=1)[None,:]
 
 
 def init_latin(bounds):
