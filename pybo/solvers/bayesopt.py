@@ -87,12 +87,13 @@ def solve_bayesopt(f,
         # setting) may not be the best in the world. But we can use X/Y to set
         # this if we want.
         sn, sf, mu = 1.0, 1.0, 0.0
-        ell = (bounds[:, 1] - bounds[:, 0]) / 4
+        boxsize = bounds[:, 1] - bounds[:, 0]
+        ell = boxsize / 10
         gp = pygp.BasicGP(sn, sf, ell, mu, kernel='matern3')
         prior = {
-            'sn': pygp.priors.Gamma(1., 10.),
-            'sf': pygp.priors.Gamma(5., 1.0),
-            'ell': pygp.priors.Gamma(ell, np.ones_like(ell)),
+            'sn': pygp.priors.Horseshoe(scale=0.1, min=1e-6),
+            'sf': pygp.priors.LogNormal(mu=0., sigma=1., min=1e-6),
+            'ell': pygp.priors.Uniform(boxsize / 1000, boxsize * 2),
             'mu': pygp.priors.Gaussian(0, 10)}
 
     if inference is 'fixed':
