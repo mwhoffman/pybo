@@ -14,14 +14,26 @@ import numpy as np
 from ..utils import ldsample
 
 # exported symbols
-__all__ = ['init_middle', 'init_latin']
+__all__ = ['init_middle', 'init_uniform', 'init_latin', 'init_sobol']
 
 
 def init_middle(bounds):
     return np.mean(bounds, axis=1)[None,:]
 
 
+def init_uniform(bounds):
+    n = 3*len(bounds)
+    X = ldsample.random(bounds, n)
+    return X
+
+
 def init_latin(bounds):
     n = 3*len(bounds)
-    X = ldsample.latin(bounds, n, 0)
+    X = ldsample.latin(bounds, n)
+    return X
+
+
+def init_sobol(bounds):
+    n = 3*len(bounds)
+    X = ldsample.sobol(bounds, n)
     return X
