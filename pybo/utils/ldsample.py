@@ -9,10 +9,10 @@ from __future__ import print_function
 
 # local imports
 from .random import rstate
+from .sobol_lib import i4_sobol_generate
 
 # global imports
 import numpy as np
-from sobol_lib import i4_sobol_generate
 
 # exported symbols
 __all__ = ['random', 'latin', 'sobol']
@@ -58,8 +58,8 @@ def latin(bounds, n, rng=None):
 
 def sobol(bounds, n, rng=None):
     """
-    Sample n points from a latin hypercube within the specified region, given
-    by a list of [(lo,hi), ..] bounds in each dimension.
+    Sample n points from a sobol sequence within the specified region, given by
+    a list of [(lo,hi), ..] bounds in each dimension.
     """
     rng = rstate(rng)
     bounds = np.array(bounds, ndmin=2, copy=False)
