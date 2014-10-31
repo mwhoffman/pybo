@@ -9,12 +9,13 @@ from __future__ import print_function
 
 # local imports
 from .random import rstate
+from .sobol_lib import i4_sobol_generate
 
 # global imports
 import numpy as np
 
 # exported symbols
-__all__ = ['random', 'latin']
+__all__ = ['random', 'latin', 'sobol']
 
 
 def random(bounds, n, rng=None):
@@ -51,5 +52,22 @@ def latin(bounds, n, rng=None):
     # shuffle each dimension.
     for i in xrange(d):
         X[:, i] = rng.permutation(X[:, i])
+
+    return X
+
+
+def sobol(bounds, n, rng=None):
+    """
+    Sample n points from a sobol sequence within the specified region, given by
+    a list of [(lo,hi), ..] bounds in each dimension.
+    """
+    rng = rstate(rng)
+    bounds = np.array(bounds, ndmin=2, copy=False)
+
+    # generate the random samples.
+    d = len(bounds)
+    skip = rng.randint(100, 200)
+    w = bounds[:, 1] - bounds[:, 0]
+    X = bounds[:, 0] + w * i4_sobol_generate(d, n, skip).T
 
     return X
