@@ -42,16 +42,14 @@ def _make_dict(module, lstrip='', rstrip=''):
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
-from pygp import meta as models
-from .. import globalopt
-from . import init
+from .. import globalopt as solvers
+from . import init as initializers
 from . import policies
 from . import recommenders
 
-MODELS = _make_dict(models)
-SOLVERS = _make_dict(globalopt, lstrip='solve_')
-INIT = _make_dict(init, lstrip='init_')
 POLICIES = _make_dict(policies)
+INITIALIZERS = _make_dict(initializers, lstrip='init_')
+SOLVERS = _make_dict(solvers, lstrip='solve_')
 RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 
 
@@ -59,14 +57,12 @@ RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 
 def solve_bayesopt(f,
                    bounds,
-                   solver='lbfgs',
+                   T=100,
                    policy='ei',
                    init='middle',
-                   inference='mcmc',
+                   solver='lbfgs',
                    recommender='latent',
-                   gp=None,
-                   prior=None,
-                   T=100,
+                   model=None,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
@@ -74,42 +70,35 @@ def solve_bayesopt(f,
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
-    # grab the policy components (other than the model, which we'll initialize
-    # after observing any initial data).
-    solver = SOLVERS[solver]
+    # initialize all the solver components.
     policy = POLICIES[policy]
+    init = INITIALIZERS[init]
+    solver = SOLVERS[solver]
     recommender = RECOMMENDERS[recommender]
 
     # create a list of initial points to query.
-    X = INIT[init](bounds)
+    X = init(bounds)
     Y = [f(x) for x in X]
 
-    if gp is None:
-        # FIXME: the following initial noise parameter may not be the best.
+    if model is None:
+        # initialize a bog-simple GP model.
         sn = 1e-3
         sf = np.std(Y) if (len(Y) > 1) else 10.
         mu = np.mean(Y)
-        boxsize = bounds[:, 1] - bounds[:, 0]
-        ell = boxsize
-        gp = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
+        ell = bounds[:, 1] - bounds[:, 0]
+
+        # specify a hyperprior for the GP.
         prior = {
             'sn': pygp.priors.Horseshoe(scale=0.1, min=1e-6),
             'sf': pygp.priors.LogNormal(mu=np.log(sf), sigma=1., min=1e-6),
-            'ell': pygp.priors.Uniform(boxsize / 100, boxsize * 2),
+            'ell': pygp.priors.Uniform(ell / 100, ell * 2),
             'mu': pygp.priors.Gaussian(mu, sf)}
 
-    if inference is 'fixed':
-        model = gp.copy()
+        # create the GP model (with hyperprior).
+        model = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
+        model = pygp.meta.MCMC(model, prior, n=10, burn=100)
 
-    elif prior is None:
-        raise RuntimeError('cannot marginalize hyperparameters with no prior')
-
-    else:
-        # FIXME: this is assuming that the all inference methods correspond to
-        # some Monte Carlo estimator with kwarg n.
-        model = MODELS[inference](gp, prior, n=10)
-
-    # add data to our model.
+    # add any initial data to our model.
     model.add_data(X, Y)
 
     # allocate a datastructure containing "convergence" info.

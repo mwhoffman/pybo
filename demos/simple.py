@@ -73,7 +73,6 @@ if __name__ == '__main__':
                                f.bounds,
                                policy='ei',
                                init='latin',
-                               inference='mcmc',
                                recommender='incumbent',
                                callback=callback)
 
