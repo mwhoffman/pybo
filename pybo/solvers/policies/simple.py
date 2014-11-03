@@ -11,8 +11,12 @@ from __future__ import print_function
 import numpy as np
 import scipy.stats as ss
 
+# we don't really need the deque datastructure, but it makes grabbing the
+# final model in a model collection simple.
+from collections import deque
+
 # exported symbols
-__all__ = ['ei', 'pi', 'ucb']
+__all__ = ['ei', 'pi', 'ucb', 'thompson']
 
 
 def _integrate(index, models):
@@ -116,3 +120,9 @@ def ucb(model, delta=0.1, xi=0.2):
             return mu + np.sqrt(beta * s2)
 
     return index
+
+
+def thompson(model, N=100):
+    if hasattr(model, '__iter__'):
+        model = deque(model, maxlen=1).pop()
+    return model.sample_fourier(N).get
