@@ -58,7 +58,7 @@ def callback(model, bounds, info, x, index, ftrue):
 
 if __name__ == '__main__':
     T = 100
-    sigma = 0.05
+    sigma = 1e-6
     mean = 0.0
 
     likelihood = pygp.likelihoods.Gaussian(sigma)
@@ -74,6 +74,7 @@ if __name__ == '__main__':
                                policy='ei',
                                init='latin',
                                recommender='incumbent',
+                               noisefree=True,
                                ftrue=f.get_f,
                                callback=callback)
 
