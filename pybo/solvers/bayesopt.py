@@ -13,6 +13,8 @@ from __future__ import print_function
 import numpy as np
 import pygp
 
+from numpy.lib.recfunctions import append_fields
+
 # exported symbols
 __all__ = ['solve_bayesopt']
 
@@ -63,6 +65,7 @@ def solve_bayesopt(f,
                    solver='lbfgs',
                    recommender='latent',
                    model=None,
+                   ftrue=None,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
@@ -81,7 +84,7 @@ def solve_bayesopt(f,
     Y = [f(x) for x in X]
 
     if model is None:
-        # initialize a bog-simple GP model.
+        # initialize a simple GP model.
         sn = 1e-3
         sf = np.std(Y) if (len(Y) > 1) else 10.
         mu = np.mean(Y)
@@ -104,11 +107,9 @@ def solve_bayesopt(f,
     # allocate a datastructure containing "convergence" info.
     info = np.zeros(T, [('x', np.float, (len(bounds),)),
                         ('y', np.float),
-                        ('xbest', np.float, (len(bounds),)),
-                        ('fbest', np.float)])
+                        ('xbest', np.float, (len(bounds),))])
 
     # initialize the data.
-    info[:] = np.nan
     info['x'][:len(X)] = X
     info['y'][:len(Y)] = Y
 
@@ -119,17 +120,17 @@ def solve_bayesopt(f,
 
         # deal with any visualization.
         if callback is not None:
-            callback(info[:i], x, f, model, bounds, index)
+            callback(model, bounds, info[:i], x, index, ftrue)
 
         # make an observation and record it.
         y = f(x)
         model.add_data(x, y)
 
-        # find our next recommendation and evaluate it if possible.
-        xbest = recommender(model, bounds)
-        fbest = f.get_f(xbest[None])[0] if hasattr(f, 'get_f') else np.nan
-
         # record everything.
-        info[i] = (x, y, xbest, fbest)
+        info[i] = (x, y, recommender(model, bounds))
+
+    if ftrue is not None:
+        fbest = ftrue(info['xbest'])
+        info = append_fields(info, 'fbest', fbest, usemask=False)
 
     return info
