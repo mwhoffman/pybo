@@ -45,6 +45,7 @@ def _make_dict(module, lstrip='', rstrip=''):
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
 from .. import globalopt as solvers
+from ..utils.random import rstate
 from . import init as initializers
 from . import policies
 from . import recommenders
@@ -67,10 +68,13 @@ def solve_bayesopt(f,
                    model=None,
                    noisefree=False,
                    ftrue=None,
+                   rng=None,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
     """
+    rng = rstate(rng)
+
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
@@ -85,7 +89,7 @@ def solve_bayesopt(f,
     recommender = RECOMMENDERS[recommender]
 
     # create a list of initial points to query.
-    X = init(bounds)
+    X = init(bounds, rng)
     Y = [f(x) for x in X]
 
     if model is None:
@@ -110,7 +114,7 @@ def solve_bayesopt(f,
 
         # create the GP model (with hyperprior).
         model = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
-        model = pygp.meta.MCMC(model, prior, n=10, burn=100)
+        model = pygp.meta.MCMC(model, prior, n=10, burn=100, rng=rng)
 
     # add any initial data to our model.
     model.add_data(X, Y)
@@ -127,7 +131,7 @@ def solve_bayesopt(f,
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
         index = policy(model)
-        x, _ = solver(index, bounds, maximize=True)
+        x, _ = solver(index, bounds, maximize=True, rng=rng)
 
         # deal with any visualization.
         if callback is not None:

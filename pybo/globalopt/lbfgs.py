@@ -11,11 +11,21 @@ from __future__ import print_function
 import numpy as np
 import scipy.optimize
 
+# local imports
+from ..utils.random import rstate
+from ..utils import ldsample
+
 # exported symbols
 __all__ = ['solve_lbfgs']
 
 
-def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, maximize=False):
+def solve_lbfgs(f,
+                bounds,
+                xx=None,
+                ngrid=10000,
+                nbest=10,
+                maximize=False,
+                rng=None):
     """
     Compute func on a grid, pick nbest points, and LBFGS from there.
 
@@ -38,7 +48,7 @@ def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, maximize=False):
     if xx is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
-        xx = bounds[:, 0] + widths * np.random.rand(ngrid, dim)
+        xx = ldsample.random(bounds, ngrid, rng)
 
     # compute func_grad on points xx
     ff = f(xx, grad=False)
