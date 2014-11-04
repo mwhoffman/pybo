@@ -74,6 +74,10 @@ def solve_bayesopt(f,
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
+    # see if the query object itself defines ground truth.
+    if (ftrue is None) and hasattr(f, 'get_f'):
+        ftrue = f.get_f
+
     # initialize all the solver components.
     policy = POLICIES[policy]
     init = INITIALIZERS[init]

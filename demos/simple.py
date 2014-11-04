@@ -75,7 +75,6 @@ if __name__ == '__main__':
                                init='latin',
                                recommender='incumbent',
                                noisefree=True,
-                               ftrue=f.get_f,
                                callback=callback)
 
     # this makes sure that if we run the demo from the command line that it
