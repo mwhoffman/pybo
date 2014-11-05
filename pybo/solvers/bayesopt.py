@@ -123,6 +123,7 @@ def solve_bayesopt(f,
     # initialize the data.
     info['x'][:len(X)] = X
     info['y'][:len(Y)] = Y
+    info['xbest'][:len(Y)] = [X[np.argmax(Y[:i+1])] for i in xrange(len(Y))]
 
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
