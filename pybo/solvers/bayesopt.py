@@ -13,7 +13,11 @@ from __future__ import print_function
 import numpy as np
 import pygp
 
+# update a recarray at the end of solve_bayesopt.
 from numpy.lib.recfunctions import append_fields
+
+# local imports
+from ..utils.random import rstate
 
 # exported symbols
 __all__ = ['solve_bayesopt']
@@ -45,7 +49,6 @@ def _make_dict(module, lstrip='', rstrip=''):
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
 from .. import globalopt as solvers
-from ..utils.random import rstate
 from . import init as initializers
 from . import policies
 from . import recommenders
