@@ -19,7 +19,7 @@ try:
     # exported symbols
     __all__ += ['solve_direct']
 
-    def solve_direct(f, bounds, maximize=False):
+    def solve_direct(f, bounds, maximize=False, rng=None):
         def objective(x, grad):
             """Objective function in the form required by nlopt."""
             if grad.size > 0:

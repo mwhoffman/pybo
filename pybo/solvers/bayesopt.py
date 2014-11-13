@@ -13,7 +13,11 @@ from __future__ import print_function
 import numpy as np
 import pygp
 
+# update a recarray at the end of solve_bayesopt.
 from numpy.lib.recfunctions import append_fields
+
+# local imports
+from ..utils.random import rstate
 
 # exported symbols
 __all__ = ['solve_bayesopt']
@@ -67,10 +71,13 @@ def solve_bayesopt(f,
                    model=None,
                    noisefree=False,
                    ftrue=None,
+                   rng=None,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
     """
+    rng = rstate(rng)
+
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
@@ -85,7 +92,7 @@ def solve_bayesopt(f,
     recommender = RECOMMENDERS[recommender]
 
     # create a list of initial points to query.
-    X = init(bounds)
+    X = init(bounds, rng)
     Y = [f(x) for x in X]
 
     if model is None:
@@ -110,7 +117,7 @@ def solve_bayesopt(f,
 
         # create the GP model (with hyperprior).
         model = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
-        model = pygp.meta.MCMC(model, prior, n=10, burn=100)
+        model = pygp.meta.MCMC(model, prior, n=10, burn=100, rng=rng)
 
     # add any initial data to our model.
     model.add_data(X, Y)
@@ -128,7 +135,7 @@ def solve_bayesopt(f,
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
         index = policy(model)
-        x, _ = solver(index, bounds, maximize=True)
+        x, _ = solver(index, bounds, maximize=True, rng=rng)
 
         # deal with any visualization.
         if callback is not None:

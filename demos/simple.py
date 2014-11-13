@@ -57,24 +57,26 @@ def callback(model, bounds, info, x, index, ftrue):
 
 
 if __name__ == '__main__':
-    T = 100
     sigma = 1e-6
     mean = 0.0
+    rng = 0
 
     likelihood = pygp.likelihoods.Gaussian(sigma)
-    kernel = \
-        pygp.kernels.Periodic(1, 1, 0.5) + \
-        pygp.kernels.SE(1, 1)
+    kernel = pygp.kernels.Periodic(1, 1, 0.5) + \
+             pygp.kernels.SE(1, 1)
 
     gp = pygp.inference.ExactGP(likelihood, kernel, mean)
-    f = pybo.functions.GPModel([3, 5], gp)
+    f = pybo.functions.GPModel([3, 5], gp, rng=rng)
+    T = 30 * f.bounds.shape[0]
 
     info = pybo.solve_bayesopt(f,
                                f.bounds,
+                               T=T,
                                policy='ei',
                                init='latin',
                                recommender='incumbent',
                                noisefree=True,
+                               rng=rng,
                                callback=callback)
 
     # this makes sure that if we run the demo from the command line that it
