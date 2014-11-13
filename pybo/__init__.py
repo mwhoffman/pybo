@@ -3,10 +3,10 @@ Objects which global optimization solvers.
 """
 
 # pylint: disable=wildcard-import
-from .solvers import *
+from .bayesopt import *
 
-from . import solvers
+from . import bayesopt
 from . import functions
 
 __all__ = []
-__all__ += solvers.__all__
+__all__ += bayesopt.__all__

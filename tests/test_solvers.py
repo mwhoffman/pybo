@@ -14,8 +14,7 @@ import numpy.testing as nt
 import scipy.optimize as spop
 
 # local imports
-import pybo
-import pybo.globalopt as globalopt
+from pybo.bayesopt import solvers
 
 
 def branin(x, grad=False):
@@ -24,21 +23,22 @@ def branin(x, grad=False):
     """
     x = np.array(x, ndmin=2)
     n = x.shape[0]
-    a = x[:,1] - (5.1 / (4 * np.pi**2)) * x[:,0]**2 + 5 * x[:,0] / np.pi - 6
-    f = a**2 + 10 * (1 - 1 / (8 * np.pi)) * np.cos(x[:,0]) + 10
+    a = x[:, 1] - (5.1 / (4*np.pi**2)) * x[:, 0]**2 + 5 * x[:, 0] / np.pi - 6
+    f = a**2 + 10 * (1 - 1 / (8 * np.pi)) * np.cos(x[:, 0]) + 10
 
     if not grad:
-        return f
+        return -f
 
     da = np.vstack([5 / np.pi - 5.1 / (2 * np.pi**2) * x[:, 0], np.ones(n)])
     g = np.transpose(2 * a * da)
     g[:, 0] += -10 * (1 - 1 / (8 * np.pi)) * np.sin(x[:, 0])
-    return f, g
+
+    return -f, -g
 
 
 # bounds for the branin function.
 branin.bounds = np.array([[-5, 10], [0, 15]])
-branin.fmin = 0.3978873
+branin.fmax = -0.3978873
 
 
 def test_branin():
@@ -56,10 +56,10 @@ def test_branin():
 
 
 def check_solver(solver):
-    _, fmin = solver(branin, branin.bounds)
-    nt.assert_allclose(fmin, branin.fmin, rtol=1e-6, atol=1e-6)
+    _, fmax = solver(branin, branin.bounds)
+    nt.assert_allclose(fmax, branin.fmax, rtol=1e-6, atol=1e-6)
 
 
 def test_solvers():
-    for fname in globalopt.__all__:
-        yield check_solver, getattr(globalopt, fname)
+    for fname in solvers.__all__:
+        yield check_solver, getattr(solvers, fname)

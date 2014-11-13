@@ -48,13 +48,13 @@ def _make_dict(module, lstrip='', rstrip=''):
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
-from .. import globalopt as solvers
-from . import init as initializers
+from . import inits
+from . import solvers
 from . import policies
 from . import recommenders
 
 POLICIES = _make_dict(policies)
-INITIALIZERS = _make_dict(initializers, lstrip='init_')
+INITS = _make_dict(inits, lstrip='init_')
 SOLVERS = _make_dict(solvers, lstrip='solve_')
 RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 
@@ -87,7 +87,7 @@ def solve_bayesopt(f,
 
     # initialize all the solver components.
     policy = POLICIES[policy]
-    init = INITIALIZERS[init]
+    init = INITS[init]
     solver = SOLVERS[solver]
     recommender = RECOMMENDERS[recommender]
 
@@ -135,7 +135,7 @@ def solve_bayesopt(f,
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
         index = policy(model)
-        x, _ = solver(index, bounds, maximize=True, rng=rng)
+        x, _ = solver(index, bounds, rng=rng)
 
         # deal with any visualization.
         if callback is not None:

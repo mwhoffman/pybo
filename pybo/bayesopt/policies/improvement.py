@@ -1,5 +1,6 @@
 """
-Simple/common acquisition functions.
+Acquisition functions based on the probability or expected value of
+improvement.
 """
 
 # future imports
@@ -11,12 +12,8 @@ from __future__ import print_function
 import numpy as np
 import scipy.stats as ss
 
-# we don't really need the deque datastructure, but it makes grabbing the
-# final model in a model collection simple.
-from collections import deque
-
 # exported symbols
-__all__ = ['ei', 'pi', 'ucb', 'thompson']
+__all__ = ['EI', 'PI']
 
 
 def _integrate(index, models):
@@ -34,7 +31,7 @@ def _integrate(index, models):
     return index2
 
 
-def ei(model, xi=0.0):
+def EI(model, xi=0.0):
     X, _ = model.data
     f, _ = model.posterior(X)
     target = f.max() + xi
@@ -70,7 +67,7 @@ def ei(model, xi=0.0):
         return index
 
 
-def pi(model, xi=0.05):
+def PI(model, xi=0.05):
     X, _ = model.data
     f, _ = model.posterior(X)
     target = f.max() + xi
@@ -100,29 +97,3 @@ def pi(model, xi=0.05):
         return _integrate(index, model)
     else:
         return index
-
-
-def ucb(model, delta=0.1, xi=0.2):
-    # NOTE: getting d in this way won't work unless data has been added.
-    d = model.data[0].shape[1]
-    a = xi * 2 * np.log(np.pi**2 / 3 / delta)
-    b = xi * (4 + d)
-
-    def index(X, grad=False):
-        posterior = model.posterior(X, grad=grad)
-        mu, s2 = posterior[:2]
-        beta = a + b * np.log(model.ndata + 1)
-        if grad:
-            dmu, ds2 = posterior[2:]
-            return (mu + np.sqrt(beta * s2),
-                    dmu + 0.5 * np.sqrt(beta / s2[:, None]) * ds2)
-        else:
-            return mu + np.sqrt(beta * s2)
-
-    return index
-
-
-def thompson(model, N=100):
-    if hasattr(model, '__iter__'):
-        model = deque(model, maxlen=1).pop()
-    return model.sample_fourier(N).get

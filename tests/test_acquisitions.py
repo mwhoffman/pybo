@@ -15,7 +15,7 @@ import scipy.optimize as spop
 
 # local imports
 import pygp
-import pybo.solvers.policies as policies
+import pybo.bayesopt.policies as policies
 
 
 def check_acq_gradient(policy):
