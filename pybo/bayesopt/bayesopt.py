@@ -12,6 +12,8 @@ from __future__ import print_function
 # global imports
 import numpy as np
 import pygp
+import inspect
+import functools
 
 # update a recarray at the end of solve_bayesopt.
 from numpy.lib.recfunctions import append_fields
@@ -33,7 +35,7 @@ __all__ = ['solve_bayesopt']
 
 ### SOLVER COMPONENTS #########################################################
 
-def get_components(init, policy, solver, recommender):
+def get_components(init, policy, solver, recommender, rng):
     """
     Return model components for Bayesian optimization of the correct form given
     string identifiers.
@@ -43,28 +45,35 @@ def get_components(init, policy, solver, recommender):
         Get a dictionary mapping names to exported symbols from the named
         packages and strip off the named prefix to the function.
         """
-        fs = dict()
+        funcs = dict()
         for fname in module.__all__:
-            f = getattr(module, fname)
+            func = getattr(module, fname)
             if fname.startswith(lstrip):
                 fname = fname[len(lstrip):]
             fname = fname.lower()
-            fs[fname] = f
-        return fs
+            funcs[fname] = func
+        return funcs
 
-    # get the named component and all possible functions from the given module.
+    comps = []
     parts = [(init, get_all(inits, lstrip='init_')),
              (policy, get_all(policies, lstrip='')),
              (solver, get_all(solvers, lstrip='solve_')),
              (recommender, get_all(recommenders, lstrip='best_'))]
 
-    # grab the named functions, or if the requested component is a function
-    # itself just use that.
-    parts = [
-        fname if hasattr(fname, '__call__') else mod[fname]
-        for (fname, mod) in parts]
+    # construct the models in order.
+    for func, mod in parts:
+        func = func if hasattr(func, '__call__') else mod[func]
+        kwargs_ = {}
 
-    return tuple(parts)
+        if 'rng' in inspect.getargspec(func).args:
+            kwargs_['rng'] = rng
+
+        if len(kwargs_) > 0:
+            func = functools.partial(func, **kwargs_)
+
+        comps.append(func)
+
+    return tuple(comps)
 
 
 ### THE BAYESOPT META SOLVER ##################################################
@@ -96,10 +105,10 @@ def solve_bayesopt(f,
 
     # get the model components.
     init, policy, solver, recommender = \
-        get_components(init, policy, solver, recommender)
+        get_components(init, policy, solver, recommender, rng)
 
     # create a list of initial points to query.
-    X = init(bounds, rng)
+    X = init(bounds)
     Y = [f(x) for x in X]
 
     if model is None:
@@ -142,7 +151,7 @@ def solve_bayesopt(f,
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
         index = policy(model)
-        x, _ = solver(index, bounds, rng=rng)
+        x, _ = solver(index, bounds)
 
         # deal with any visualization.
         if callback is not None:

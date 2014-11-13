@@ -17,8 +17,8 @@ from ..utils import ldsample
 __all__ = ['init_middle', 'init_uniform', 'init_latin', 'init_sobol']
 
 
-def init_middle(bounds, rng=None):
-    return np.mean(bounds, axis=1)[None,:]
+def init_middle(bounds):
+    return np.mean(bounds, axis=1)[None, :]
 
 
 def init_uniform(bounds, rng=None):
