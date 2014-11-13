@@ -21,8 +21,8 @@ __all__ = ['solve_lbfgs']
 def solve_lbfgs(f,
                 bounds,
                 nbest=10,
-                ninit=10000,
-                xinit=None,
+                ngrid=10000,
+                xgrid=None,
                 rng=None):
     """
     Compute the objective function on an initial grid, pick `nbest` points, and
@@ -36,20 +36,20 @@ def solve_lbfgs(f,
 
         bounds: bounds of the search space.
         nbest: number of best points from the initial test points to refine.
-        ninit: number of (random) grid points to test initially.
-        xinit: initial test points; ninit is ignored if this is given.
+        ngrid: number of (random) grid points to test initially.
+        xgrid: initial test points; ngrid is ignored if this is given.
 
     Returns:
         xmin, fmax: location and value of the maximizer.
     """
 
-    if xinit is None:
+    if xgrid is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
-        xinit = ldsample.random(bounds, ninit, rng)
+        xgrid = ldsample.random(bounds, ngrid, rng)
 
-    # compute func_grad on points xinit
-    finit = f(xinit, grad=False)
+    # compute func_grad on points xgrid
+    finit = f(xgrid, grad=False)
     idx_sorted = np.argsort(finit)[::-1]
 
     # lbfgsb needs the gradient to be "contiguous", squeezing the gradient
@@ -61,7 +61,7 @@ def solve_lbfgs(f,
 
     # TODO: the following can easily be multiprocessed
     result = [scipy.optimize.fmin_l_bfgs_b(objective, x0, bounds=bounds)[:2]
-              for x0 in xinit[idx_sorted[:nbest]]]
+              for x0 in xgrid[idx_sorted[:nbest]]]
 
     # loop through the results and pick out the smallest.
     xmin, fmin = result[np.argmin(_[1] for _ in result)]
