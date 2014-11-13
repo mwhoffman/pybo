@@ -35,7 +35,7 @@ __all__ = ['solve_bayesopt']
 
 ### SOLVER COMPONENTS #########################################################
 
-def get_components(init, policy, solver, recommender, rng):
+def get_components(init, policy, solver, recommender, rng, kwargs):
     """
     Return model components for Bayesian optimization of the correct form given
     string identifiers.
@@ -89,7 +89,8 @@ def solve_bayesopt(f,
                    noisefree=False,
                    ftrue=None,
                    rng=None,
-                   callback=None):
+                   callback=None,
+                   **kwargs):
     """
     Maximize the given function using Bayesian Optimization.
     """
@@ -105,7 +106,7 @@ def solve_bayesopt(f,
 
     # get the model components.
     init, policy, solver, recommender = \
-        get_components(init, policy, solver, recommender, rng)
+        get_components(init, policy, solver, recommender, rng, kwargs)
 
     # create a list of initial points to query.
     X = init(bounds)
