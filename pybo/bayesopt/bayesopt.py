@@ -135,7 +135,7 @@ def solve_bayesopt(f,
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
         index = policy(model)
-        x, _ = solver(index, bounds, maximize=True, rng=rng)
+        x, _ = solver(index, bounds, rng=rng)
 
         # deal with any visualization.
         if callback is not None:

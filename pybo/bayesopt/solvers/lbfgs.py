@@ -12,7 +12,6 @@ import numpy as np
 import scipy.optimize
 
 # local imports
-from ...utils.random import rstate
 from ...utils import ldsample
 
 # exported symbols
@@ -24,7 +23,6 @@ def solve_lbfgs(f,
                 xx=None,
                 ngrid=10000,
                 nbest=10,
-                maximize=False,
                 rng=None):
     """
     Compute func on a grid, pick nbest points, and LBFGS from there.
@@ -42,9 +40,6 @@ def solve_lbfgs(f,
         xmin, fmin: location and value or minimizer.
     """
 
-    dim = len(bounds)
-    widths = bounds[:, 1] - bounds[:, 0]
-
     if xx is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
@@ -52,19 +47,13 @@ def solve_lbfgs(f,
 
     # compute func_grad on points xx
     ff = f(xx, grad=False)
-    idx_sorted = np.argsort(ff)
-
-    if maximize:
-        idx_sorted = idx_sorted[::-1]
+    idx_sorted = np.argsort(ff)[::-1]
 
     # lbfgsb needs the gradient to be "contiguous", squeezing the gradient
     # protects against func_grads that return ndmin=2 arrays
     def objective(x):
         fx, gx = f(x[None], grad=True)
-        fx, gx = fx[0], gx[0]
-        if maximize:
-            fx, gx = -fx, -gx
-        return fx, gx
+        return -fx[0], -gx[0]
 
     # TODO: the following can easily be multiprocessed
     result = [scipy.optimize.fmin_l_bfgs_b(objective, x0, bounds=bounds)[:2]
@@ -74,4 +63,4 @@ def solve_lbfgs(f,
     xmin, fmin = result[np.argmin(_[1] for _ in result)]
 
     # return the values (negate if we're finding a max)
-    return xmin, -fmin if maximize else fmin
+    return xmin, -fmin
