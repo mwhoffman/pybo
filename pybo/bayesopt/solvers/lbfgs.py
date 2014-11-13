@@ -12,8 +12,8 @@ import numpy as np
 import scipy.optimize
 
 # local imports
-from ..utils.random import rstate
-from ..utils import ldsample
+from ...utils.random import rstate
+from ...utils import ldsample
 
 # exported symbols
 __all__ = ['solve_lbfgs']

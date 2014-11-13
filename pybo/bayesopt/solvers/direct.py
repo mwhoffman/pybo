@@ -19,6 +19,9 @@ try:
     # exported symbols
     __all__ += ['solve_direct']
 
+    # FIXME: DIRECT ignores the rng parameter. this seems kind of dumb and that
+    # we really only need this to satisfy an interface.
+
     def solve_direct(f, bounds, maximize=False, rng=None):
         def objective(x, grad):
             """Objective function in the form required by nlopt."""

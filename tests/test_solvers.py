@@ -15,7 +15,7 @@ import scipy.optimize as spop
 
 # local imports
 import pybo
-import pybo.globalopt as globalopt
+import pybo.bayesopt.solvers as solvers
 
 
 def branin(x, grad=False):
@@ -61,5 +61,5 @@ def check_solver(solver):
 
 
 def test_solvers():
-    for fname in globalopt.__all__:
-        yield check_solver, getattr(globalopt, fname)
+    for fname in solvers.__all__:
+        yield check_solver, getattr(solvers, fname)
