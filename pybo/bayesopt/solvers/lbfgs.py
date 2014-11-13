@@ -13,11 +13,13 @@ import scipy.optimize
 
 # local imports
 from ...utils import ldsample
+from ..utils import params
 
 # exported symbols
 __all__ = ['solve_lbfgs']
 
 
+@params('nbest', 'ngrid')
 def solve_lbfgs(f,
                 bounds,
                 nbest=10,
