@@ -19,32 +19,6 @@ from numpy.lib.recfunctions import append_fields
 # local imports
 from ..utils.random import rstate
 
-# exported symbols
-__all__ = ['solve_bayesopt']
-
-
-### HELPERS ###################################################################
-
-def _make_dict(module, lstrip='', rstrip=''):
-    """
-    Given a module return a dictionary mapping the name of each of its exported
-    functions to the function itself.
-    """
-    def generator():
-        """Generate the (name, function) tuples."""
-        for fname in module.__all__:
-            f = getattr(module, fname)
-            if fname.startswith(lstrip):
-                fname = fname[len(lstrip):]
-            if fname.endswith(rstrip):
-                fname = fname[::-1][len(rstrip):][::-1]
-            fname = fname.lower()
-            yield fname, f
-    return dict(generator())
-
-
-### SOLVER COMPONENTS #########################################################
-
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
@@ -53,10 +27,44 @@ from . import solvers
 from . import policies
 from . import recommenders
 
-POLICIES = _make_dict(policies)
-INITS = _make_dict(inits, lstrip='init_')
-SOLVERS = _make_dict(solvers, lstrip='solve_')
-RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
+# exported symbols
+__all__ = ['solve_bayesopt']
+
+
+### SOLVER COMPONENTS #########################################################
+
+def get_components(init, policy, solver, recommender):
+    """
+    Return model components for Bayesian optimization of the correct form given
+    string identifiers.
+    """
+    def get_all(module, lstrip):
+        """
+        Get a dictionary mapping names to exported symbols from the named
+        packages and strip off the named prefix to the function.
+        """
+        fs = dict()
+        for fname in module.__all__:
+            f = getattr(module, fname)
+            if fname.startswith(lstrip):
+                fname = fname[len(lstrip):]
+            fname = fname.lower()
+            fs[fname] = f
+        return fs
+
+    # get the named component and all possible functions from the given module.
+    parts = [(init, get_all(inits, lstrip='init_')),
+             (policy, get_all(policies, lstrip='')),
+             (solver, get_all(solvers, lstrip='solve_')),
+             (recommender, get_all(recommenders, lstrip='best_'))]
+
+    # grab the named functions, or if the requested component is a function
+    # itself just use that.
+    parts = [
+        fname if hasattr(fname, '__call__') else mod[fname]
+        for (fname, mod) in parts]
+
+    return tuple(parts)
 
 
 ### THE BAYESOPT META SOLVER ##################################################
@@ -64,8 +72,8 @@ RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 def solve_bayesopt(f,
                    bounds,
                    T=100,
-                   policy='ei',
                    init='middle',
+                   policy='ei',
                    solver='lbfgs',
                    recommender='latent',
                    model=None,
@@ -76,8 +84,6 @@ def solve_bayesopt(f,
     """
     Maximize the given function using Bayesian Optimization.
     """
-    rng = rstate(rng)
-
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
@@ -85,11 +91,12 @@ def solve_bayesopt(f,
     if (ftrue is None) and hasattr(f, 'get_f'):
         ftrue = f.get_f
 
-    # initialize all the solver components.
-    policy = POLICIES[policy]
-    init = INITS[init]
-    solver = SOLVERS[solver]
-    recommender = RECOMMENDERS[recommender]
+    # initialize the random number generator.
+    rng = rstate(rng)
+
+    # get the model components.
+    init, policy, solver, recommender = \
+        get_components(init, policy, solver, recommender)
 
     # create a list of initial points to query.
     X = init(bounds, rng)
