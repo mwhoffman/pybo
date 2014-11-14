@@ -1,14 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as pl
-
 import pygp
-import pybo.solvers.policies.entropy as entropy
+
+from pybo.bayesopt.policies import entropy
+from mwhutils import random
 
 
 if __name__ == '__main__':
     gp = pygp.BasicGP(sn=0.1, ell=0.05, sf=1, kernel='matern3')
 
-    rng = pygp.utils.random.rstate(0)
+    rng = random.rstate(0)
     X = rng.rand(20, 1)
     y = gp.sample(X, latent=False, rng=rng)
     z = np.array([0.8])
