@@ -10,9 +10,7 @@ from __future__ import print_function
 
 # global imports
 import numpy as np
-
-# local imports
-from ..utils.random import rstate
+from mwhutils.random import rstate
 
 # exported symbols
 __all__ = ['Sinusoidal', 'Gramacy', 'Branin', 'Bohachevsky', 'Goldstein']

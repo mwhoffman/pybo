@@ -12,7 +12,7 @@ import numpy as np
 import scipy.optimize
 
 # local imports
-from ...utils import ldsample
+from mwhutils import random
 from ..utils import params
 
 # exported symbols
@@ -48,7 +48,7 @@ def solve_lbfgs(f,
     if xgrid is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
-        xgrid = ldsample.random(bounds, ngrid, rng)
+        xgrid = random.uniform(bounds, ngrid, rng)
 
     # compute func_grad on points xgrid
     finit = f(xgrid, grad=False)

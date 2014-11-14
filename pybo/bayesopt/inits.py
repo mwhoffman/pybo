@@ -11,7 +11,7 @@ from __future__ import print_function
 import numpy as np
 
 # local imports
-from ..utils import ldsample
+from mwhutils import random
 from .utils import params
 
 # exported symbols
@@ -32,7 +32,7 @@ def init_uniform(bounds, n=None, rng=None):
     then use 3D points where D is the dimensionality of the input space.
     """
     n = 3*len(bounds) if (n is None) else n
-    X = ldsample.random(bounds, n, rng)
+    X = random.uniform(bounds, n, rng)
     return X
 
 
@@ -43,7 +43,7 @@ def init_latin(bounds, n=None, rng=None):
     then use 3D points where D is the dimensionality of the input space.
     """
     n = 3*len(bounds) if (n is None) else n
-    X = ldsample.latin(bounds, n, rng)
+    X = random.latin(bounds, n, rng)
     return X
 
 
@@ -54,5 +54,5 @@ def init_sobol(bounds, n=None, rng=None):
     3D points where D is the dimensionality of the input space.
     """
     n = 3*len(bounds) if (n is None) else n
-    X = ldsample.sobol(bounds, n, rng)
+    X = random.sobol(bounds, n, rng)
     return X
