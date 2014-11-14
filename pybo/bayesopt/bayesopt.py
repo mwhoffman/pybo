@@ -35,45 +35,54 @@ __all__ = ['solve_bayesopt']
 
 ### SOLVER COMPONENTS #########################################################
 
-def get_components(init, policy, solver, recommender, rng, kwargs):
+def get_components(init, policy, solver, recommender, rng):
     """
     Return model components for Bayesian optimization of the correct form given
     string identifiers.
     """
-    def get_all(module, lstrip):
-        """
-        Get a dictionary mapping names to exported symbols from the named
-        packages and strip off the named prefix to the function.
-        """
-        funcs = dict()
-        for fname in module.__all__:
-            func = getattr(module, fname)
-            if fname.startswith(lstrip):
-                fname = fname[len(lstrip):]
-            fname = fname.lower()
-            funcs[fname] = func
-        return funcs
+    def get_func(key, value, module, lstrip):
+        if isinstance(value, (list, tuple)):
+            try:
+                value, kwargs = value
+                if not isinstance(kwargs, dict):
+                    raise ValueError
+            except ValueError:
+                raise ValueError('invalid arguments for component %r' % key)
+        else:
+            kwargs = {}
 
-    comps = []
-    parts = [(init, get_all(inits, lstrip='init_')),
-             (policy, get_all(policies, lstrip='')),
-             (solver, get_all(solvers, lstrip='solve_')),
-             (recommender, get_all(recommenders, lstrip='best_'))]
+        if hasattr(value, '__call__'):
+            func = value
+        else:
+            for fname in module.__all__:
+                func = getattr(module, fname)
+                if fname.startswith(lstrip):
+                    fname = fname[len(lstrip):]
+                fname = fname.lower()
+                if fname == value:
+                    break
+            else:
+                raise ValueError('invalid identifier for component %r' % key)
 
-    # construct the models in order.
-    for func, mod in parts:
-        func = func if hasattr(func, '__call__') else mod[func]
-        kwargs_ = {}
+        kwarg_set = set(kwargs.keys())
+        valid_set = getattr(func, '_params', set())
+
+        if not kwarg_set.issubset(valid_set):
+            raise ValueError('unknown parameters for component %r: %r' %
+                             (key, list(kwarg_set - valid_set)))
 
         if 'rng' in inspect.getargspec(func).args:
-            kwargs_['rng'] = rng
+            kwargs['rng'] = rng
 
-        if len(kwargs_) > 0:
-            func = functools.partial(func, **kwargs_)
+        if len(kwargs) > 0:
+            func = functools.partial(func, **kwargs)
 
-        comps.append(func)
+        return func
 
-    return tuple(comps)
+    return (get_func('init', init, inits, lstrip='init_'),
+            get_func('policy', policy, policies, lstrip=''),
+            get_func('solver', solver, solvers, lstrip='solve_'),
+            get_func('recommender', recommender, recommenders, lstrip='best_'))
 
 
 ### THE BAYESOPT META SOLVER ##################################################
@@ -89,8 +98,7 @@ def solve_bayesopt(f,
                    noisefree=False,
                    ftrue=None,
                    rng=None,
-                   callback=None,
-                   **kwargs):
+                   callback=None):
     """
     Maximize the given function using Bayesian Optimization.
     """
@@ -106,7 +114,7 @@ def solve_bayesopt(f,
 
     # get the model components.
     init, policy, solver, recommender = \
-        get_components(init, policy, solver, recommender, rng, kwargs)
+        get_components(init, policy, solver, recommender, rng)
 
     # create a list of initial points to query.
     X = init(bounds)
