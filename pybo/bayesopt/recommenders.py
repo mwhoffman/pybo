@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 # local imports
-from .. import globalopt
+from . import solvers
 
 # exported symbols
 __all__ = ['best_latent', 'best_incumbent', 'best_observed']
@@ -25,8 +25,8 @@ def best_latent(model, bounds):
             return model.posterior(X, True)[::2]
         else:
             return model.posterior(X)[0]
-    xinit, _ = model.data
-    xbest, _ = globalopt.solve_lbfgs(mu, bounds, xx=xinit, maximize=True)
+    xgrid, _ = model.data
+    xbest, _ = solvers.solve_lbfgs(mu, bounds, xgrid=xgrid)
     return xbest
 
 

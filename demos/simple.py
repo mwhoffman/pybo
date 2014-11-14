@@ -11,7 +11,7 @@ import pygp.plotting as pp
 import pybo
 
 
-def callback(info, x, f, model, bounds, index):
+def callback(model, bounds, info, x, index, ftrue):
     """
     Plot the current posterior and the index.
     """
@@ -19,7 +19,7 @@ def callback(info, x, f, model, bounds, index):
     xmax = bounds[0, 1]
 
     X = np.linspace(xmin, xmax, 500)[:, None]
-    F = f.get_f(X)
+    F = ftrue(X)
     ymin, ymax = F.min(), F.max()
     ymin -= 0.2 * (ymax - ymin)
     ymax += 0.2 * (ymax - ymin)
@@ -46,7 +46,7 @@ def callback(info, x, f, model, bounds, index):
     pl.ylabel('acquisition')
 
     pl.subplot(122)
-    pl.plot(info['fbest'], lw=2)
+    pl.plot(ftrue(info['xbest']), lw=2)
     pl.axis('tight')
     pl.xlabel('iterations')
     pl.ylabel('value of recommendation')
@@ -57,16 +57,26 @@ def callback(info, x, f, model, bounds, index):
 
 
 if __name__ == '__main__':
-    T = 100
-    sigma = 0.05
-    gp = pygp.BasicGP(sigma, 1.0, 0.1, kernel='matern3')
-    f = pybo.functions.GPModel([3, 5], gp)
+    sigma = 1e-6
+    mean = 0.0
+    rng = 0
+
+    likelihood = pygp.likelihoods.Gaussian(sigma)
+    kernel = pygp.kernels.Periodic(1, 1, 0.5) + \
+             pygp.kernels.SE(1, 1)
+
+    gp = pygp.inference.ExactGP(likelihood, kernel, mean)
+    f = pybo.functions.GPModel([3, 5], gp, rng=rng)
+    T = 30 * f.bounds.shape[0]
 
     info = pybo.solve_bayesopt(f,
                                f.bounds,
+                               T=T,
                                policy='ei',
+                               init='latin',
                                recommender='incumbent',
-                               inference='mcmc',
+                               noisefree=True,
+                               rng=rng,
                                callback=callback)
 
     # this makes sure that if we run the demo from the command line that it

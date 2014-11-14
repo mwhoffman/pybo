@@ -19,7 +19,7 @@ try:
     # exported symbols
     __all__ += ['solve_direct']
 
-    def solve_direct(f, bounds, maximize=False):
+    def solve_direct(f, bounds):
         def objective(x, grad):
             """Objective function in the form required by nlopt."""
             if grad.size > 0:
@@ -35,17 +35,13 @@ try:
         opt.set_lower_bounds(list(bounds[:, 0]))
         opt.set_upper_bounds(list(bounds[:, 1]))
         opt.set_ftol_rel(1e-6)
-
-        if maximize:
-            opt.set_max_objective(objective)
-        else:
-            opt.set_min_objective(objective)
+        opt.set_max_objective(objective)
 
         xmin = bounds[:, 0] + (bounds[:, 1] - bounds[:, 0]) / 2
         xmin = opt.optimize(xmin)
-        fmin = opt.last_optimum_value()
+        fmax = opt.last_optimum_value()
 
-        return xmin, fmin
+        return xmin, fmax
 
 except ImportError:
     pass

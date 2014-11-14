@@ -11,57 +11,62 @@ from __future__ import print_function
 import numpy as np
 import scipy.optimize
 
+# local imports
+from mwhutils import random
+from ..utils import params
+
 # exported symbols
 __all__ = ['solve_lbfgs']
 
 
-def solve_lbfgs(f, bounds, xx=None, ngrid=10000, nbest=10, maximize=False):
+@params('nbest', 'ngrid')
+def solve_lbfgs(f,
+                bounds,
+                nbest=10,
+                ngrid=10000,
+                xgrid=None,
+                rng=None):
     """
-    Compute func on a grid, pick nbest points, and LBFGS from there.
+    Compute the objective function on an initial grid, pick `nbest` points, and
+    maximize using LBFGS from these initial points.
 
     Args:
         f: function handle that takes an optional `grad` boolean kwarg
            and if `grad=True` returns a tuple of `(function, gradient)`.
            NOTE: this functions is assumed to allow for multiple inputs in
            vectorized form.
+
         bounds: bounds of the search space.
-        ngrid: number of (random) grid points to test initially.
         nbest: number of best points from the initial test points to refine.
+        ngrid: number of (random) grid points to test initially.
+        xgrid: initial test points; ngrid is ignored if this is given.
 
     Returns:
-        xmin, fmin: location and value or minimizer.
+        xmin, fmax: location and value of the maximizer.
     """
 
-    dim = len(bounds)
-    widths = bounds[:, 1] - bounds[:, 0]
-
-    if xx is None:
+    if xgrid is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
-        xx = bounds[:, 0] + widths * np.random.rand(ngrid, dim)
+        xgrid = random.uniform(bounds, ngrid, rng)
 
-    # compute func_grad on points xx
-    ff = f(xx, grad=False)
-    idx_sorted = np.argsort(ff)
-
-    if maximize:
-        idx_sorted = idx_sorted[::-1]
+    # compute func_grad on points xgrid
+    finit = f(xgrid, grad=False)
+    idx_sorted = np.argsort(finit)[::-1]
 
     # lbfgsb needs the gradient to be "contiguous", squeezing the gradient
-    # protects against func_grads that return ndmin=2 arrays
+    # protects against func_grads that return ndmin=2 arrays. We also need to
+    # negate everything so that we are maximizing.
     def objective(x):
         fx, gx = f(x[None], grad=True)
-        fx, gx = fx[0], gx[0]
-        if maximize:
-            fx, gx = -fx, -gx
-        return fx, gx
+        return -fx[0], -gx[0]
 
     # TODO: the following can easily be multiprocessed
     result = [scipy.optimize.fmin_l_bfgs_b(objective, x0, bounds=bounds)[:2]
-              for x0 in xx[idx_sorted[:nbest]]]
+              for x0 in xgrid[idx_sorted[:nbest]]]
 
     # loop through the results and pick out the smallest.
     xmin, fmin = result[np.argmin(_[1] for _ in result)]
 
     # return the values (negate if we're finding a max)
-    return xmin, -fmin if maximize else fmin
+    return xmin, -fmin

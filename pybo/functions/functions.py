@@ -10,6 +10,7 @@ from __future__ import print_function
 
 # global imports
 import numpy as np
+from mwhutils.random import rstate
 
 # exported symbols
 __all__ = ['Sinusoidal', 'Gramacy', 'Branin', 'Bohachevsky', 'Goldstein']
@@ -22,8 +23,9 @@ class GOModel(object):
     should be amenable to _minimization_, but calls to `get_data` will return
     the negative of `f` so we can maximize the function.
     """
-    def __init__(self, sigma=0.0):
+    def __init__(self, sigma=0.0, rng=None):
         self._sigma = sigma
+        self._rng = rstate(rng)
 
     def __call__(self, x):
         return self.get(x)[0]
@@ -31,7 +33,7 @@ class GOModel(object):
     def get(self, X):
         y = self.get_f(X)
         if self._sigma > 0:
-            y += np.random.normal(scale=self._sigma, size=len(y))
+            y += self._rng.normal(scale=self._sigma, size=len(y))
         return y
 
     def get_f(self, X):

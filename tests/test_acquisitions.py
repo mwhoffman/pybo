@@ -15,13 +15,13 @@ import scipy.optimize as spop
 
 # local imports
 import pygp
-import pybo.policies.gpacquisition as gpacquisition
+import pybo.bayesopt.policies as policies
 
 
 def check_acq_gradient(policy):
     # randomly generate some data.
     rng = np.random.RandomState(0)
-    X = rng.rand(10,2)
+    X = rng.rand(10, 2)
     y = rng.rand(10)
 
     # create the model.
@@ -41,5 +41,5 @@ def check_acq_gradient(policy):
 
 
 def test_acqs():
-    for fname in gpacquisition.__all__:
-        yield check_acq_gradient, getattr(gpacquisition, fname)
+    for fname in policies.__all__:
+        yield check_acq_gradient, getattr(policies, fname)
