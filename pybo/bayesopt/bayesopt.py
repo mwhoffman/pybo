@@ -41,12 +41,18 @@ def get_components(init, policy, solver, recommender, rng):
     string identifiers.
     """
     def get_func(key, value, module, lstrip):
+        """
+        Construct the model component if the given value is either a function
+        or a string identifying a function in the given module (after stripping
+        extraneous text). The value can also be passed as a 2-tuple where the
+        second element includes kwargs. Partially apply any kwargs and the rng
+        before returning the function.
+        """
         if isinstance(value, (list, tuple)):
             try:
                 value, kwargs = value
-                if not isinstance(kwargs, dict):
-                    raise ValueError
-            except ValueError:
+                kwargs = dict(kwargs)
+            except (ValueError, TypeError):
                 raise ValueError('invalid arguments for component %r' % key)
         else:
             kwargs = {}
@@ -101,6 +107,36 @@ def solve_bayesopt(f,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
+
+    Args:
+        f: function handle representing the objective function.
+        bounds: bounds of the search space as a (d,2)-array.
+        T: horizon for optimization.
+        init: the initialization component.
+        policy: the acquisition component.
+        solver: the inner-loop solver component.
+        recommender: the recommendation component.
+        model: the Bayesian model instantiation.
+        noisefree: a boolean denoting that the model is noisefree; this only
+                   applies if a default model is used (ie. it is ignored if the
+                   model argument is used).
+        ftrue: a ground-truth function (for evaluation).
+        rng: either an RandomState object or an integer used to seed the state;
+             this will be fed to each component that requests randomness.
+        callback: a function to call on each iteration for visualization.
+
+    Note that the modular way in which this function has been written allows
+    one to also pass parameters directly to some of the components. This works
+    for the `init`, `policy`, `solver`, and `recommender` inputs. These
+    components can be passed as either a string, a function, or a 2-tuple where
+    the first item is a string/function and the second is a dictionary of
+    additional arguments to pass to the component.
+
+    Returns:
+        A numpy record array containing a trace of the optimization process.
+        The fields of this array are `x`, `y`, and `xbest` corresponding to the
+        query locations, outputs, and recommendations at each iteration. If
+        ground-truth is known an additional field `fbest` will be included.
     """
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
