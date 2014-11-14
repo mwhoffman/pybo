@@ -25,8 +25,8 @@ def best_latent(model, bounds):
             return model.posterior(X, True)[::2]
         else:
             return model.posterior(X)[0]
-    xinit, _ = model.data
-    xbest, _ = solvers.solve_lbfgs(mu, bounds, xx=xinit)
+    xgrid, _ = model.data
+    xbest, _ = solvers.solve_lbfgs(mu, bounds, xgrid=xgrid)
     return xbest
 
 

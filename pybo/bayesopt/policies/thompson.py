@@ -11,11 +11,19 @@ from __future__ import print_function
 # models.
 from collections import deque
 
+# local imports
+from ..utils import params
+
 # exported symbols
 __all__ = ['Thompson']
 
 
-def Thompson(model, N=100):
+@params('n')
+def Thompson(model, n=100):
+    """
+    Implementation of Thompson sampling for continuous models using a finite
+    approximation to the kernel matrix with `n` Fourier components.
+    """
     if hasattr(model, '__iter__'):
         model = deque(model, maxlen=1).pop()
-    return model.sample_fourier(N).get
+    return model.sample_fourier(n).get

@@ -12,38 +12,14 @@ from __future__ import print_function
 # global imports
 import numpy as np
 import pygp
+import inspect
+import functools
 
 # update a recarray at the end of solve_bayesopt.
 from numpy.lib.recfunctions import append_fields
 
 # local imports
 from ..utils.random import rstate
-
-# exported symbols
-__all__ = ['solve_bayesopt']
-
-
-### HELPERS ###################################################################
-
-def _make_dict(module, lstrip='', rstrip=''):
-    """
-    Given a module return a dictionary mapping the name of each of its exported
-    functions to the function itself.
-    """
-    def generator():
-        """Generate the (name, function) tuples."""
-        for fname in module.__all__:
-            f = getattr(module, fname)
-            if fname.startswith(lstrip):
-                fname = fname[len(lstrip):]
-            if fname.endswith(rstrip):
-                fname = fname[::-1][len(rstrip):][::-1]
-            fname = fname.lower()
-            yield fname, f
-    return dict(generator())
-
-
-### SOLVER COMPONENTS #########################################################
 
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
@@ -53,10 +29,66 @@ from . import solvers
 from . import policies
 from . import recommenders
 
-POLICIES = _make_dict(policies)
-INITS = _make_dict(inits, lstrip='init_')
-SOLVERS = _make_dict(solvers, lstrip='solve_')
-RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
+# exported symbols
+__all__ = ['solve_bayesopt']
+
+
+### SOLVER COMPONENTS #########################################################
+
+def get_components(init, policy, solver, recommender, rng):
+    """
+    Return model components for Bayesian optimization of the correct form given
+    string identifiers.
+    """
+    def get_func(key, value, module, lstrip):
+        """
+        Construct the model component if the given value is either a function
+        or a string identifying a function in the given module (after stripping
+        extraneous text). The value can also be passed as a 2-tuple where the
+        second element includes kwargs. Partially apply any kwargs and the rng
+        before returning the function.
+        """
+        if isinstance(value, (list, tuple)):
+            try:
+                value, kwargs = value
+                kwargs = dict(kwargs)
+            except (ValueError, TypeError):
+                raise ValueError('invalid arguments for component %r' % key)
+        else:
+            kwargs = {}
+
+        if hasattr(value, '__call__'):
+            func = value
+        else:
+            for fname in module.__all__:
+                func = getattr(module, fname)
+                if fname.startswith(lstrip):
+                    fname = fname[len(lstrip):]
+                fname = fname.lower()
+                if fname == value:
+                    break
+            else:
+                raise ValueError('invalid identifier for component %r' % key)
+
+        kwarg_set = set(kwargs.keys())
+        valid_set = getattr(func, '_params', set())
+
+        if not kwarg_set.issubset(valid_set):
+            raise ValueError('unknown parameters for component %r: %r' %
+                             (key, list(kwarg_set - valid_set)))
+
+        if 'rng' in inspect.getargspec(func).args:
+            kwargs['rng'] = rng
+
+        if len(kwargs) > 0:
+            func = functools.partial(func, **kwargs)
+
+        return func
+
+    return (get_func('init', init, inits, lstrip='init_'),
+            get_func('policy', policy, policies, lstrip=''),
+            get_func('solver', solver, solvers, lstrip='solve_'),
+            get_func('recommender', recommender, recommenders, lstrip='best_'))
 
 
 ### THE BAYESOPT META SOLVER ##################################################
@@ -64,8 +96,8 @@ RECOMMENDERS = _make_dict(recommenders, lstrip='best_')
 def solve_bayesopt(f,
                    bounds,
                    T=100,
-                   policy='ei',
                    init='middle',
+                   policy='ei',
                    solver='lbfgs',
                    recommender='latent',
                    model=None,
@@ -75,9 +107,37 @@ def solve_bayesopt(f,
                    callback=None):
     """
     Maximize the given function using Bayesian Optimization.
-    """
-    rng = rstate(rng)
 
+    Args:
+        f: function handle representing the objective function.
+        bounds: bounds of the search space as a (d,2)-array.
+        T: horizon for optimization.
+        init: the initialization component.
+        policy: the acquisition component.
+        solver: the inner-loop solver component.
+        recommender: the recommendation component.
+        model: the Bayesian model instantiation.
+        noisefree: a boolean denoting that the model is noisefree; this only
+                   applies if a default model is used (ie. it is ignored if the
+                   model argument is used).
+        ftrue: a ground-truth function (for evaluation).
+        rng: either an RandomState object or an integer used to seed the state;
+             this will be fed to each component that requests randomness.
+        callback: a function to call on each iteration for visualization.
+
+    Note that the modular way in which this function has been written allows
+    one to also pass parameters directly to some of the components. This works
+    for the `init`, `policy`, `solver`, and `recommender` inputs. These
+    components can be passed as either a string, a function, or a 2-tuple where
+    the first item is a string/function and the second is a dictionary of
+    additional arguments to pass to the component.
+
+    Returns:
+        A numpy record array containing a trace of the optimization process.
+        The fields of this array are `x`, `y`, and `xbest` corresponding to the
+        query locations, outputs, and recommendations at each iteration. If
+        ground-truth is known an additional field `fbest` will be included.
+    """
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
@@ -85,14 +145,15 @@ def solve_bayesopt(f,
     if (ftrue is None) and hasattr(f, 'get_f'):
         ftrue = f.get_f
 
-    # initialize all the solver components.
-    policy = POLICIES[policy]
-    init = INITS[init]
-    solver = SOLVERS[solver]
-    recommender = RECOMMENDERS[recommender]
+    # initialize the random number generator.
+    rng = rstate(rng)
+
+    # get the model components.
+    init, policy, solver, recommender = \
+        get_components(init, policy, solver, recommender, rng)
 
     # create a list of initial points to query.
-    X = init(bounds, rng)
+    X = init(bounds)
     Y = [f(x) for x in X]
 
     if model is None:
@@ -135,7 +196,7 @@ def solve_bayesopt(f,
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
         index = policy(model)
-        x, _ = solver(index, bounds, rng=rng)
+        x, _ = solver(index, bounds)
 
         # deal with any visualization.
         if callback is not None:
