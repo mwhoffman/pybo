@@ -17,9 +17,7 @@ import functools
 
 # update a recarray at the end of solve_bayesopt.
 from numpy.lib.recfunctions import append_fields
-
-# local imports
-from ..utils.random import rstate
+from mwhutils.random import rstate
 
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
