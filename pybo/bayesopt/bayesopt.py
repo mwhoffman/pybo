@@ -193,7 +193,7 @@ def solve_bayesopt(f,
 
     for i in xrange(model.ndata, T):
         # get the next point to evaluate.
-        index = policy(model)
+        index = policy(model, bounds)
         x, _ = solver(index, bounds)
 
         # deal with any visualization.

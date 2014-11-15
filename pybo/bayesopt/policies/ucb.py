@@ -18,14 +18,13 @@ __all__ = ['UCB']
 
 
 @params('delta', 'xi')
-def UCB(model, delta=0.1, xi=0.2):
+def UCB(model, bounds, delta=0.1, xi=0.2):
     """
     The (GP)UCB acquisition function where `delta` is the probability that the
     upper bound holds and `xi` is a multiplicative modification of the
     exploration factor.
     """
-    # FIXME: getting d in this way won't work unless data has been added.
-    d = model.data[0].shape[1]
+    d = len(bounds)
     a = xi * 2 * np.log(np.pi**2 / 3 / delta)
     b = xi * (4 + d)
 

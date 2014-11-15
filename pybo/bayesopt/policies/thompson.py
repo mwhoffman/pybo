@@ -19,7 +19,7 @@ __all__ = ['Thompson']
 
 
 @params('n')
-def Thompson(model, n=100):
+def Thompson(model, _, n=100):
     """
     Implementation of Thompson sampling for continuous models using a finite
     approximation to the kernel matrix with `n` Fourier components.
