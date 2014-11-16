@@ -11,8 +11,11 @@ import scipy.linalg as sla
 import scipy.stats as ss
 
 from mwhutils.linalg import chol_update
+from mwhutils.random import rstate
+from ..solvers import solve_lbfgs
+from ..utils import params
 
-__all__ = []
+__all__ = ['PES']
 
 
 def get_latent(m0, v0, ymax, sn2):
@@ -109,3 +112,22 @@ def predict(gp, xstar, Xtest):
     s2 -= b * (b + a) * (rho - s2)**2 / s
 
     return mu, s2
+
+
+@params('nopt', 'nfeat')
+def PES(model, bounds, nopt=50, nfeat=200, rng=None):
+    rng = rstate(rng)
+    funcs = [model.sample_fourier(nfeat, rng) for _ in xrange(nopt)]
+    xopts = [solve_lbfgs(f.get, bounds, rng=rng)[0] for f in funcs]
+
+    def index(X, grad=False):
+        if grad:
+            raise NotImplementedError
+        s2 = model._likelihood.s2
+        H = -np.sum(np.log(predict(model, xopt, X)[1] + s2) for xopt in xopts)
+        H /= nopt
+        H += np.log(model.posterior(X)[1] + s2)
+        H /= 2
+        return H
+
+    return index
