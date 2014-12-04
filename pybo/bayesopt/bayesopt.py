@@ -160,16 +160,14 @@ def solve_bayesopt(objective,
         mu = np.mean(Y)
         ell = bounds[:, 1] - bounds[:, 0]
 
-        # FIXME: this may not be a great setting for the noise parameter; if
-        # we're noisy it may not be so bad... but for "noisefree" models this
-        # sets it fixed to 1e-6, which may be too big.
-        sn = 1e-6 if noisefree else 1e-3
+        # FIXME: this may not be a great setting for the noise parameter
+        sn = 1e-5 if noisefree else 1e-3
 
         # specify a hyperprior for the GP.
         prior = {
             'sn': (
                 None if noisefree else
-                pygp.priors.Horseshoe(scale=0.1, min=1e-6)),
+                pygp.priors.Horseshoe(scale=0.1, min=1e-5)),
             'sf': pygp.priors.LogNormal(mu=np.log(sf), sigma=1., min=1e-6),
             'ell': pygp.priors.Uniform(ell / 100, ell * 2),
             'mu': pygp.priors.Gaussian(mu, sf)}
