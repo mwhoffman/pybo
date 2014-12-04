@@ -1,16 +1,13 @@
 """
-Intermediate
-============
-
 Demo performing Bayesian optimization on an objective function sampled from a
-prescribed GP prior. This script also demonstrates user-defined visualization
-via a callback function that is imported from the advanced demo.
+Gaussian process. This script also demonstrates user-defined visualization via
+a callback function that is imported from the advanced demo.
 
-This demo shows how to define likelihood and covariance functions from which a
-Gaussian process (GP) model is then initialized. Note, however, that in this
-demo the GP is only used to sample a test function from. The default model used
-internally by pybo.solve_bayesopt() is an MCMC meta-model which implements
-hyperparameter marginalization.
+Note that in this demo we are sampling an objective function from a Gaussian
+process, but we are not modifying the default GP used within `pybo.solve_bayesopt`.
+The default model used internally by `pybo.solve_bayesopt` uses a GP with zero
+mean, Matern kernel, and hyperparameters marginalized using MCMC. To modify this
+behavior see the advanced demo.
 
 In this demo we also explore additional keyword arguments for solve_bayesopt()
 which gives the user control over
@@ -34,18 +31,12 @@ if __name__ == '__main__':
     rng = 0                                         # random seed
     noise = 1e-6                                    # observation noise
     mean = 0.0                                      # GP mean
+    bounds = np.array([3, 5])                       # bounds of the objective
 
-    likelihood = pygp.likelihoods.Gaussian(noise)   # likelihood
-    kernel = (pygp.kernels.Periodic(1, 1, 0.5) +    # composition of 2 kernels
-              pygp.kernels.SE(1, 1))
-
-    # define GP from which the objective function will be sampled. Note: the
-    # following is *not* the GP that is used internally by solve_bayesopt().
-    # See demos/advanced.py for a demo on how to prescribe that model.
+    # define a GP which we will sample an objective from.
+    likelihood = pygp.likelihoods.Gaussian(noise)
+    kernel = pygp.kernels.Periodic(1, 1, 0.5) + pygp.kernels.SE(1, 1)
     gp = pygp.inference.ExactGP(likelihood, kernel, mean)
-
-    # sample an objective function from the above GP.
-    bounds = np.array([3, 5])
     objective = pybo.functions.GPModel(bounds, gp, rng=rng)
 
     dim = bounds.shape[0]                           # dimension of problem
