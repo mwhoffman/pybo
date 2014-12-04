@@ -20,7 +20,6 @@ which gives the user control over
 """
 
 import numpy as np
-
 import pygp
 import pybo
 
@@ -32,35 +31,33 @@ from advanced import callback
 
 
 if __name__ == '__main__':
-    rng = 0         # random seed
-    noise = 1e-6    # observation noise
-    mean = 0.0      # GP mean
+    rng = 0                                         # random seed
+    noise = 1e-6                                    # observation noise
+    mean = 0.0                                      # GP mean
 
-    # define likelihood and covariance kernel
-    likelihood = pygp.likelihoods.Gaussian(noise)
-    kernel = (pygp.kernels.Periodic(1, 1, 0.5) +    # with pygp, one can easily
-              pygp.kernels.SE(1, 1))                # compose built-in kernels
+    likelihood = pygp.likelihoods.Gaussian(noise)   # likelihood
+    kernel = (pygp.kernels.Periodic(1, 1, 0.5) +    # composition of 2 kernels
+              pygp.kernels.SE(1, 1))
 
-    # define GP from which the objective function will be sampled
-    # Note: the following is *not* the GP that is used internally by
-    # solve_bayesopt(). See demos/advanced.py for a demo on how to prescribe
-    # that model.
+    # define GP from which the objective function will be sampled. Note: the
+    # following is *not* the GP that is used internally by solve_bayesopt().
+    # See demos/advanced.py for a demo on how to prescribe that model.
     gp = pygp.inference.ExactGP(likelihood, kernel, mean)
 
-    # sample objective function given bounds and the GP
+    # sample an objective function from the above GP.
     bounds = np.array([3, 5])
     objective = pybo.functions.GPModel(bounds, gp, rng=rng)
 
-    dim = bounds.shape[0]       # dimension of problem
-    niter = 30 * dim            # number of iterations (horizon)
+    dim = bounds.shape[0]                           # dimension of problem
+    niter = 30 * dim                                # number of iterations
 
     info = pybo.solve_bayesopt(
         objective,
         bounds,
         niter=niter,
-        policy='thompson',          # 'ei', 'pi', 'ucb', or 'thompson'
-        init='latin',               # 'latin', 'sobol', or 'uniform'
-        recommender='observed',     # 'incumbent', 'latent', or 'observed'
+        init='latin',                               # initialization strategy
+        policy='thompson',                          # exploration policy
+        recommender='observed',                     # recommendation strategy
         noisefree=True,
         rng=rng,
         callback=callback)
