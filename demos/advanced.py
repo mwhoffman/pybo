@@ -136,7 +136,7 @@ if __name__ == '__main__':
     info = pybo.solve_bayesopt(
         objective,
         bounds,
-        T=niter,
+        niter=niter,
         policy='ei',                # 'ei', 'pi', 'ucb', or 'thompson'
         init='sobol',               # 'latin', 'sobol', or 'uniform'
         recommender='incumbent',    # 'incumbent', 'latent', or 'observed

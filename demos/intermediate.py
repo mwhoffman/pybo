@@ -24,6 +24,7 @@ import numpy as np
 import pygp
 import pybo
 
+# import callback from advanced demo
 import os
 import sys
 sys.path.append(os.path.dirname(__file__))
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     info = pybo.solve_bayesopt(
         objective,
         bounds,
-        T=niter,
+        niter=niter,
         policy='thompson',          # 'ei', 'pi', 'ucb', or 'thompson'
         init='latin',               # 'latin', 'sobol', or 'uniform'
         recommender='observed',     # 'incumbent', 'latent', or 'observed'
