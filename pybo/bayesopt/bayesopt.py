@@ -91,9 +91,9 @@ def get_components(init, policy, solver, recommender, rng):
 
 ### THE BAYESOPT META SOLVER ##################################################
 
-def solve_bayesopt(f,
+def solve_bayesopt(objective,
                    bounds,
-                   T=100,
+                   niter=100,
                    init='middle',
                    policy='ei',
                    solver='lbfgs',
@@ -107,9 +107,9 @@ def solve_bayesopt(f,
     Maximize the given function using Bayesian Optimization.
 
     Args:
-        f: function handle representing the objective function.
+        objective: function handle representing the objective function.
         bounds: bounds of the search space as a (d,2)-array.
-        T: horizon for optimization.
+        niter: horizon for optimization.
         init: the initialization component.
         policy: the acquisition component.
         solver: the inner-loop solver component.
@@ -140,8 +140,8 @@ def solve_bayesopt(f,
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
     # see if the query object itself defines ground truth.
-    if (ftrue is None) and hasattr(f, 'get_f'):
-        ftrue = f.get_f
+    if (ftrue is None) and hasattr(objective, 'get_f'):
+        ftrue = objective.get_f
 
     # initialize the random number generator.
     rng = rstate(rng)
@@ -152,7 +152,7 @@ def solve_bayesopt(f,
 
     # create a list of initial points to query.
     X = init(bounds)
-    Y = [f(x) for x in X]
+    Y = [objective(x) for x in X]
 
     if model is None:
         # initialize parameters of a simple GP model.
@@ -160,16 +160,14 @@ def solve_bayesopt(f,
         mu = np.mean(Y)
         ell = bounds[:, 1] - bounds[:, 0]
 
-        # FIXME: this may not be a great setting for the noise parameter; if
-        # we're noisy it may not be so bad... but for "noisefree" models this
-        # sets it fixed to 1e-6, which may be too big.
-        sn = 1e-6 if noisefree else 1e-3
+        # FIXME: this may not be a great setting for the noise parameter
+        sn = 1e-5 if noisefree else 1e-3
 
         # specify a hyperprior for the GP.
         prior = {
             'sn': (
                 None if noisefree else
-                pygp.priors.Horseshoe(scale=0.1, min=1e-6)),
+                pygp.priors.Horseshoe(scale=0.1, min=1e-5)),
             'sf': pygp.priors.LogNormal(mu=np.log(sf), sigma=1., min=1e-6),
             'ell': pygp.priors.Uniform(ell / 100, ell * 2),
             'mu': pygp.priors.Gaussian(mu, sf)}
@@ -182,7 +180,7 @@ def solve_bayesopt(f,
     model.add_data(X, Y)
 
     # allocate a datastructure containing "convergence" info.
-    info = np.zeros(T, [('x', np.float, (len(bounds),)),
+    info = np.zeros(niter, [('x', np.float, (len(bounds),)),
                         ('y', np.float),
                         ('xbest', np.float, (len(bounds),))])
 
@@ -191,7 +189,7 @@ def solve_bayesopt(f,
     info['y'][:len(Y)] = Y
     info['xbest'][:len(Y)] = [X[np.argmax(Y[:i+1])] for i in xrange(len(Y))]
 
-    for i in xrange(model.ndata, T):
+    for i in xrange(model.ndata, niter):
         # get the next point to evaluate.
         index = policy(model)
         x, _ = solver(index, bounds)
@@ -201,7 +199,7 @@ def solve_bayesopt(f,
             callback(model, bounds, info[:i], x, index, ftrue)
 
         # make an observation and record it.
-        y = f(x)
+        y = objective(x)
         model.add_data(x, y)
 
         # record everything.
