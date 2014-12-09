@@ -1,0 +1,26 @@
+language: python
+
+python:
+    - "2.7"
+
+before_install:
+    - "wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh"
+    - "bash miniconda.sh -b -p $HOME/miniconda"
+    - "export PATH=$HOME/miniconda/bin:$PATH"
+    - "hash -r"
+    - "conda config --set always_yes yes --set changeps1 no"
+    - "conda update -q conda"
+    - "conda info -a"
+    - "conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip matplotlib atlas numpy scipy nose"
+    - "source activate test-environment"
+    - "pip install python-coveralls"
+
+install:
+    - "pip install git+https://github.com/mwhoffman/{mwhutils,pygp}.git"
+
+script:
+    - "nosetests  --with-coverage --cover-inclusive --cover-package=pybo"
+
+after_success:
+    - "coveralls"
+
