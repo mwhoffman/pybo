@@ -20,6 +20,7 @@ modules that can be user-defined:
 import numpy as np
 import matplotlib.pyplot as pl
 
+import mwhutils
 import pygp
 import pybo
 
@@ -46,9 +47,9 @@ if __name__ == '__main__':
         rng=rng)
 
     # plotting
-    xx = np.linspace(*bounds, num=1000)             # grid for plotting
-    yy = objective.get(xx[:, None])                 # function value on grid
-    mu, s2 = model.posterior(xx[:, None])           # model posterior on grid...
+    xx = mwhutils.random.grid(bounds, 1000)         # grid for plotting
+    yy = objective.get(xx)                          # function value on grid
+    mu, s2 = model.posterior(xx)                    # model posterior on grid...
     lo = mu - 2 * np.sqrt(s2)                       # ... with confidence bands
     hi = mu + 2 * np.sqrt(s2)
 
@@ -56,7 +57,8 @@ if __name__ == '__main__':
     pl.plot(info['x'], info['y'], 'ro', label='Observed')
     pl.vlines(xrec, *pl.ylim(), color='g', label='Recommended')
     pl.plot(xx, mu, 'b-', label='Model')
-    pl.fill_between(xx, lo, hi, color='b', alpha=0.1, label='Confidence')
+    pl.fill_between(xx.ravel(), lo, hi,
+                    color='b', alpha=0.1, label='Confidence')
 
     pl.xlim(*bounds)
     pl.legend(loc=0)
