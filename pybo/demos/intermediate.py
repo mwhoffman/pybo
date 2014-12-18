@@ -18,20 +18,16 @@ modules that can be user-defined:
 """
 
 import numpy as np
+import matplotlib.pyplot as pl
+
 import pygp
 import pybo
 
-# import callback from advanced demo
-import os
-import sys
-sys.path.append(os.path.dirname(__file__))
-from advanced import callback
-
 
 if __name__ == '__main__':
-    rng = 0                                             # random seed
-    bounds = np.array([3, 5])                           # bounds of search space
-    dim = bounds.shape[0]                               # dimension of space
+    rng = 0                                         # random seed
+    bounds = np.array([3, 5])                       # bounds of search space
+    dim = bounds.shape[0]                           # dimension of space
 
     # define a GP which we will sample an objective from.
     likelihood = pygp.likelihoods.Gaussian(sigma=1e-6)
@@ -39,13 +35,29 @@ if __name__ == '__main__':
     gp = pygp.inference.ExactGP(likelihood, kernel, mean=0.0)
     objective = pybo.functions.GPModel(bounds, gp, rng=rng)
 
-    info = pybo.solve_bayesopt(
+    xrec, info, model = pybo.solve_bayesopt(
         objective,
         bounds,
         niter=30*dim,
-        init='latin',                                   # initialization policy
-        policy='thompson',                              # exploration policy
-        recommender='observed',                         # recommendation policy
+        init='latin',                               # initialization policy
+        policy='thompson',                          # exploration policy
+        recommender='observed',                     # recommendation policy
         noisefree=True,
-        rng=rng,
-        callback=callback)
+        rng=rng)
+
+    # plotting
+    xx = np.linspace(*bounds, num=1000)             # grid for plotting
+    yy = objective.get(xx[:, None])                 # function value on grid
+    mu, s2 = model.posterior(xx[:, None])           # model posterior on grid...
+    lo = mu - 2 * np.sqrt(s2)                       # ... with confidence bands
+    hi = mu + 2 * np.sqrt(s2)
+
+    pl.plot(xx, yy.ravel(), 'k--', label='True')
+    pl.plot(info['x'], info['y'], 'ro', label='Observed')
+    pl.vlines(xrec, *pl.ylim(), color='g', label='Recommended')
+    pl.plot(xx, mu, 'b-', label='Model')
+    pl.fill_between(xx, lo, hi, color='b', alpha=0.1, label='Confidence')
+
+    pl.xlim(*bounds)
+    pl.legend(loc=0)
+    pl.show()

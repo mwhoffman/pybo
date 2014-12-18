@@ -1,11 +1,8 @@
 """
-Advanced
-========
-
 Demo demonstrating Bayesian optimization with hyperparameter sampling. This
-script includes the callback function, used for user-defined visualization,
-which can be skipped upon first reading. Jump to '__main__' for the meat of the
-script.
+script includes the callback function `animate1` for user-defined visualization
+and animation, which can be skipped upon first reading. Jump to '__main__' for
+the meat of the script.
 
 By default, pybo.solve_bayesopt() uses an MCMC meta-model to estimate
 hyperparameter marginalization. In this tutorial we show how to define this
@@ -16,7 +13,7 @@ In this script we show how the user can define his own
   - kernel,
   - meta-model, or even
   - pass the GP model to solve_bayesopt() directly in order to fix the
-hyperparameters to their initially prescribed setting.
+    hyperparameters to their initially prescribed setting.
 """
 
 import numpy as np
@@ -26,7 +23,7 @@ import pygp
 import pybo
 
 
-def callback(model, bounds, info, x, index, ftrue):
+def animate1(model, bounds, info, x, index, ftrue):
     """
     Plot the current posterior, the index, and the value of the current
     recommendation.
@@ -86,7 +83,7 @@ def callback(model, bounds, info, x, index, ftrue):
 
 if __name__ == '__main__':
     rng = 0                                             # random seed
-    noise = 1e-1                                        # observation noise
+    noise = 1e-3                                        # observation noise
 
     # define the objective function
     objective = pybo.functions.Gramacy(noise)
@@ -110,7 +107,7 @@ if __name__ == '__main__':
     model = pygp.meta.MCMC(gp, prior, n=10, rng=rng)    # meta-model for MCMC
                                                         # marginalization
 
-    info = pybo.solve_bayesopt(
+    xrec, info, model = pybo.solve_bayesopt(
         objective,
         bounds,
         niter=30*dim,
@@ -119,4 +116,6 @@ if __name__ == '__main__':
         recommender='incumbent',                        # recommendation policy
         model=model,                                    # surrogate model
         rng=rng,
-        callback=callback)
+        callback=animate1)
+
+    pl.show()

@@ -1,7 +1,4 @@
 """
-Two-dimensional
-===============
-
 Demo of Bayesian optimization on two-dimensional test functions with contour
 visualizations.
 
@@ -22,7 +19,7 @@ import pygp.plotting as pp
 import pybo
 
 
-def callback(model, bounds, info, x, index, ftrue):
+def animate2(model, bounds, info, x, index, ftrue):
     """
     Plot the current posterior and the index.
     """
@@ -113,7 +110,7 @@ if __name__ == '__main__':
     model = pygp.meta.SMC(gp, prior, n=10, rng=rng)     # meta-model for SMC
                                                         # marginalization
 
-    info = pybo.solve_bayesopt(
+    xrec, info, model = pybo.solve_bayesopt(
         objective,
         bounds,
         niter=30*dim,
@@ -122,4 +119,6 @@ if __name__ == '__main__':
         recommender='latent',                           # recommendation policy
         model=model,                                    # surrogate model
         rng=rng,
-        callback=callback)
+        callback=animate2)
+
+    pl.show()
