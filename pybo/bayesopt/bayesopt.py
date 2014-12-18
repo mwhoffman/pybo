@@ -205,8 +205,10 @@ def solve_bayesopt(objective,
         # record everything.
         info[i] = (x, y, recommender(model, bounds))
 
+    xrec = info['xbest'][-1]                            # final recommendation
+
     if ftrue is not None:
         fbest = ftrue(info['xbest'])
         info = append_fields(info, 'fbest', fbest, usemask=False)
 
-    return info
+    return (xrec, info, model)
