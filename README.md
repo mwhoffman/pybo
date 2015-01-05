@@ -18,12 +18,20 @@ Installation
 
 The easiest way to install this package is by running
 
-    pip install git+https://github.com/mwhoffman/{mwhutils,pygp,pybo}.git
+    pip install -r https://github.com/mwhoffman/pybo/raw/master/requirements.txt
+    pip install git+https://github.com/mwhoffman/pybo.git
 
-from the command line. Alternatively the packages above can be installed by
-cloning their repositories and using `setup.py` directly. Once the package is
-installed the included demos can be run directly via python.  For example, by
-running
+The first line installs any dependencies of the package and the second line
+installs the package itself. Alternatively the repository can be cloned directly
+in order to make any local modifications to the code. In this case the
+dependencies can easily be installed by running
+
+    pip install -r requirements.txt
+
+from the main directory. The package itself can be installed by running `python
+setup.py` or by symlinking the directory into somewhere on the `PYTHONPATH`.
+Once the package is installed the included demos can be run directly via python.
+For example, by running
 
     python -m pybo.demos.beginner
 
