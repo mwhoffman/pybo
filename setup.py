@@ -12,4 +12,5 @@ setup(name='pybo',
       url='http://github.com/mwhoffman/pybo',
       license='Simplified BSD',
       packages=find_packages(),
-      package_data={'': ['*.txt', '*.npz']})
+      package_data={'': ['*.txt', '*.npz']},
+      install_requires=['numpy', 'scipy', 'matplotlib', 'mwhutils', 'pygp'])
