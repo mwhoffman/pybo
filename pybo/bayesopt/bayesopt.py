@@ -11,7 +11,6 @@ from __future__ import print_function
 
 # global imports
 import numpy as np
-import pygp
 import inspect
 import functools
 
@@ -93,12 +92,12 @@ def get_components(init, policy, solver, recommender, rng):
 
 def solve_bayesopt(objective,
                    bounds,
+                   model,
                    niter=100,
                    init='middle',
                    policy='ei',
                    solver='lbfgs',
                    recommender='latent',
-                   model=None,
                    noisefree=False,
                    ftrue=None,
                    rng=None,
@@ -154,35 +153,32 @@ def solve_bayesopt(objective,
     X = init(bounds)
     Y = [objective(x) for x in X]
 
-    if model is None:
-        # initialize parameters of a simple GP model.
-        sf = np.std(Y) if (len(Y) > 1) else 10.
-        mu = np.mean(Y)
-        ell = bounds[:, 1] - bounds[:, 0]
-
-        # FIXME: this may not be a great setting for the noise parameter
-        sn = 1e-5 if noisefree else 1e-3
-
-        # specify a hyperprior for the GP.
-        prior = {
-            'sn': (
-                None if noisefree else
-                pygp.priors.Horseshoe(scale=0.1, min=1e-5)),
-            'sf': pygp.priors.LogNormal(mu=np.log(sf), sigma=1., min=1e-6),
-            'ell': pygp.priors.Uniform(ell / 100, ell * 2),
-            'mu': pygp.priors.Gaussian(mu, sf)}
-
-        # create the GP model (with hyperprior).
-        model = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
-        model = pygp.meta.MCMC(model, prior, n=10, burn=100, rng=rng)
+    # if model is None:
+    #     # initialize parameters of a simple GP model.
+    #     sf = np.std(Y) if (len(Y) > 1) else 10.
+    #     mu = np.mean(Y)
+    #     ell = bounds[:, 1] - bounds[:, 0]
+    #     # FIXME: this may not be a great setting for the noise parameter
+    #     sn = 1e-5 if noisefree else 1e-3
+    #     # specify a hyperprior for the GP.
+    #     prior = {
+    #         'sn': (
+    #             None if noisefree else
+    #             pygp.priors.Horseshoe(scale=0.1, min=1e-5)),
+    #         'sf': pygp.priors.LogNormal(mu=np.log(sf), sigma=1., min=1e-6),
+    #         'ell': pygp.priors.Uniform(ell / 100, ell * 2),
+    #         'mu': pygp.priors.Gaussian(mu, sf)}
+    #     # create the GP model (with hyperprior).
+    #     model = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
+    #     model = pygp.meta.MCMC(model, prior, n=10, burn=100, rng=rng)
 
     # add any initial data to our model.
     model.add_data(X, Y)
 
     # allocate a datastructure containing "convergence" info.
     info = np.zeros(niter, [('x', np.float, (len(bounds),)),
-                        ('y', np.float),
-                        ('xbest', np.float, (len(bounds),))])
+                            ('y', np.float),
+                            ('xbest', np.float, (len(bounds),))])
 
     # initialize the data.
     info['x'][:len(X)] = X
