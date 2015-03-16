@@ -21,28 +21,31 @@ if __name__ == '__main__':
     model = reggie.BasicGP(0.2, 1.9, 0.1, -1)
     model.add_data(X, Y)
 
-    pl.figure(1)
-    pl.clf()
-    pl.subplot(211)
-    reggie.plotting.plot_posterior(model, xmin=xmin, xmax=xmax)
-
-    for rec in [recs.best_latent, recs.best_incumbent, recs.best_observed]:
-        xbest = rec(model, f.bounds)
-        color = next(pl.gca()._get_lines.color_cycle)
-        pl.axvline(xbest, ls='--', color=color, label=rec.__name__.lower())
-
-    pl.legend(loc=0)
-    xmin, xmax, _, _ = pl.axis()
-
-    pl.subplot(212)
-    for policy in [policies.EI, policies.PI]:
-        index = policy(model)
+    while True:
+        xbest = recs.best_incumbent(model, f.bounds)
+        index = policies.EI(model)
         xnext, _ = solvers.solve_lbfgs(index, f.bounds)
-        vals = index(Z)
-        vals += np.min(vals)
-        vals /= np.max(vals)
-        lines = pl.plot(Z, vals, label=policy.__name__.lower())
-        pl.axvline(xnext, ls='--', color=lines[0].get_color())
+        T = Z.ravel()
+        I = index(Z)
 
-    pl.legend(loc=0)
-    pl.axis(xmin=xmin, xmax=xmax)
+        pl.figure(1)
+        pl.clf()
+        color1 = next(pl.gca()._get_lines.color_cycle)
+        color2 = next(pl.gca()._get_lines.color_cycle)
+
+        pl.clf()
+        pl.subplot(211)
+        reggie.plotting.plot_posterior(model, xmin=xmin, xmax=xmax, draw=False)
+        pl.axvline(xbest, ls='--', color=color1, label='recommendation')
+        pl.axis(xmin=xmin, xmax=xmax)
+        pl.legend(loc=0)
+
+        pl.subplot(212)
+        pl.plot(T, I, color=color2, label='acquisition')
+        pl.fill_between(T, np.zeros_like(I), I, color=color2, alpha=0.1)
+        pl.axvline(xnext, ls='--', color=color2, label='xnext')
+        pl.axis(xmin=xmin, xmax=xmax)
+        pl.legend(loc=0)
+        pl.draw()
+
+        model.add_data(xnext, f(xnext))
