@@ -2,16 +2,13 @@
 Implementation of methods for sampling initial points.
 """
 
-# future imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-# global imports
 import numpy as np
+import mwhutils.grid as grid
 
-# local imports
-from mwhutils import random
 from .utils import params
 
 # exported symbols
@@ -32,7 +29,7 @@ def init_uniform(bounds, n=None, rng=None):
     then use 3D points where D is the dimensionality of the input space.
     """
     n = 3*len(bounds) if (n is None) else n
-    X = random.uniform(bounds, n, rng)
+    X = grid.uniform(bounds, n, rng)
     return X
 
 
@@ -43,7 +40,7 @@ def init_latin(bounds, n=None, rng=None):
     then use 3D points where D is the dimensionality of the input space.
     """
     n = 3*len(bounds) if (n is None) else n
-    X = random.latin(bounds, n, rng)
+    X = grid.latin(bounds, n, rng)
     return X
 
 
@@ -54,5 +51,5 @@ def init_sobol(bounds, n=None, rng=None):
     3D points where D is the dimensionality of the input space.
     """
     n = 3*len(bounds) if (n is None) else n
-    X = random.sobol(bounds, n, rng)
+    X = grid.sobol(bounds, n, rng)
     return X
