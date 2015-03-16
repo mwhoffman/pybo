@@ -8,7 +8,7 @@ noise-corrupted function *f*. In particular this package allows us to place
 a prior on the possible behavior of *f* and select points in order to gather
 information about the function and its maximum.
 
-[![Build Status](https://travis-ci.org/mwhoffman/pybo.svg)]
+[![Build Status](https://api.travis-ci.org/mwhoffman/pybo.svg?branch=master)]
 (https://travis-ci.org/mwhoffman/pybo)
 [![Coverage Status](https://coveralls.io/repos/mwhoffman/pybo/badge.png)]
 (https://coveralls.io/r/mwhoffman/pybo)
