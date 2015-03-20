@@ -3,10 +3,10 @@ import benchfunk
 import reggie
 import mwhutils.plotting as mp
 
-from pybo.bayesopt import inits
-from pybo.bayesopt import policies
-from pybo.bayesopt import solvers
-from pybo.bayesopt import recommenders
+from pybo import inits
+from pybo import policies
+from pybo import solvers
+from pybo import recommenders
 
 
 if __name__ == '__main__':
