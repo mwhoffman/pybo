@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     while True:
         xbest = recommenders.best_incumbent(model, f.bounds)
-        index = policies.EI(model)
+        index = policies.UCB(model)
         xnext, _ = solvers.solve_lbfgs(index, f.bounds)
 
         mu, s2 = model.get_posterior(x[:, None])
