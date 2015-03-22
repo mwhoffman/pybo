@@ -9,9 +9,6 @@ from __future__ import print_function
 import numpy as np
 import mwhutils.grid as grid
 
-from .utils import params
-
-# exported symbols
 __all__ = ['init_middle', 'init_uniform', 'init_latin', 'init_sobol']
 
 
@@ -22,7 +19,6 @@ def init_middle(bounds):
     return np.mean(bounds, axis=1)[None, :]
 
 
-@params('n')
 def init_uniform(bounds, n=None, rng=None):
     """
     Initialize using `n` uniformly distributed query points. If `n` is `None`
@@ -33,7 +29,6 @@ def init_uniform(bounds, n=None, rng=None):
     return X
 
 
-@params('n')
 def init_latin(bounds, n=None, rng=None):
     """
     Initialize using a Latin hypercube design of size `n`. If `n` is `None`
@@ -44,7 +39,6 @@ def init_latin(bounds, n=None, rng=None):
     return X
 
 
-@params('n')
 def init_sobol(bounds, n=None, rng=None):
     """
     Initialize using a Sobol sequence of length `n`. If `n` is `None` then use

@@ -2,22 +2,15 @@
 Acquisition functions based on (GP) UCB.
 """
 
-# future imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-# global imports
 import numpy as np
 
-# local imports
-from ..utils import params
-
-# exported symbols
 __all__ = ['UCB']
 
 
-@params('delta', 'xi')
 def UCB(model, delta=0.1, xi=0.2):
     """
     The (GP)UCB acquisition function where `delta` is the probability that the

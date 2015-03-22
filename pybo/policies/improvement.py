@@ -3,19 +3,13 @@ Acquisition functions based on the probability or expected value of
 improvement.
 """
 
-# future imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-# global imports
 import numpy as np
 import scipy.stats as ss
 
-# local imports
-from ..utils import params
-
-# exported symbols
 __all__ = ['EI', 'PI']
 
 
@@ -34,7 +28,6 @@ def _integrate(index, models):
     return index2
 
 
-@params('xi')
 def EI(model, xi=0.0):
     """
     Expected improvement policy with an exploration parameter of `xi`.
@@ -74,7 +67,6 @@ def EI(model, xi=0.0):
         return index
 
 
-@params('xi')
 def PI(model, xi=0.05):
     """
     Probability of improvement policy with an exploration parameter of `xi`.

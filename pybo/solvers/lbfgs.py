@@ -10,13 +10,9 @@ import numpy as np
 import scipy.optimize
 import mwhutils.grid as grid
 
-from ..utils import params
-
-# exported symbols
 __all__ = ['solve_lbfgs']
 
 
-@params('nbest', 'ngrid')
 def solve_lbfgs(f,
                 bounds,
                 nbest=10,

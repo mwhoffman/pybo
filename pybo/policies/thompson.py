@@ -7,12 +7,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from collections import deque
-from ..utils import params
 
 __all__ = ['Thompson']
 
 
-@params('n')
 def Thompson(model, n=100, rng=None):
     """
     Implementation of Thompson sampling for continuous models using a finite
