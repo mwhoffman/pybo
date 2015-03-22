@@ -2,24 +2,17 @@
 Local gradient-based solver using multiple restarts.
 """
 
-# future imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-# global imports
 import numpy as np
 import scipy.optimize
+import mwhutils.grid as grid
 
-# local imports
-from mwhutils import random
-from ..utils import params
-
-# exported symbols
 __all__ = ['solve_lbfgs']
 
 
-@params('nbest', 'ngrid')
 def solve_lbfgs(f,
                 bounds,
                 nbest=10,
@@ -48,7 +41,7 @@ def solve_lbfgs(f,
     if xgrid is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
-        xgrid = random.uniform(bounds, ngrid, rng)
+        xgrid = grid.uniform(bounds, ngrid, rng)
 
     # compute func_grad on points xgrid
     finit = f(xgrid, grad=False)

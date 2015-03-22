@@ -3,19 +3,13 @@ Acquisition functions based on the probability or expected value of
 improvement.
 """
 
-# future imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-# global imports
 import numpy as np
 import scipy.stats as ss
 
-# local imports
-from ..utils import params
-
-# exported symbols
 __all__ = ['EI', 'PI']
 
 
@@ -34,19 +28,18 @@ def _integrate(index, models):
     return index2
 
 
-@params('xi')
 def EI(model, xi=0.0):
     """
     Expected improvement policy with an exploration parameter of `xi`.
     """
     X, _ = model.data
-    f, _ = model.posterior(X)
+    f, _ = model.get_posterior(X)
     target = f.max() + xi
 
     # define the index wrt a single model (that should act like a GP model, ie
     # in that it is marginally Gaussian and defines the posterior method).
     def index(X, grad=False, model=model):
-        posterior = model.posterior(X, grad=grad)
+        posterior = model.get_posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
         d = mu - target
@@ -74,17 +67,16 @@ def EI(model, xi=0.0):
         return index
 
 
-@params('xi')
 def PI(model, xi=0.05):
     """
     Probability of improvement policy with an exploration parameter of `xi`.
     """
     X, _ = model.data
-    f, _ = model.posterior(X)
+    f, _ = model.get_posterior(X)
     target = f.max() + xi
 
     def index(X, grad=False, model=model):
-        posterior = model.posterior(X, grad=grad)
+        posterior = model.get_posterior(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
         d = mu - target

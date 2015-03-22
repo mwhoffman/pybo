@@ -4,20 +4,14 @@ maximize some acquisition function, generally given as a simple function of the
 posterior sufficient statistics.
 """
 
-# future imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-# global imports
 import numpy as np
-import pygp
 import inspect
 import functools
-
-# update a recarray at the end of solve_bayesopt.
-from numpy.lib.recfunctions import append_fields
-from mwhutils.random import rstate
+import mwhutils.random as random
 
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
@@ -68,14 +62,22 @@ def get_components(init, policy, solver, recommender, rng):
             else:
                 raise ValueError('invalid identifier for component %r' % key)
 
-        kwarg_set = set(kwargs.keys())
-        valid_set = getattr(func, '_params', set())
+        # get the argspec
+        argspec = inspect.getargspec(func)
 
-        if not kwarg_set.issubset(valid_set):
-            raise ValueError('unknown parameters for component %r: %r' %
-                             (key, list(kwarg_set - valid_set)))
+        # from the argspec determine the valid kwargs; these should correspond
+        # to any kwargs of the function except for rng.
+        if argspec.defaults is not None:
+            valid = set(argspec.args[-len(argspec.defaults):])
+            valid.discard('rng')
+        else:
+            valid = set()
 
-        if 'rng' in inspect.getargspec(func).args:
+        if not valid.issuperset(kwargs.keys()):
+            raise ValueError("unknown keyword arguments for component '{:s}'"
+                             .format(key))
+
+        if 'rng' in argspec.args:
             kwargs['rng'] = rng
 
         if len(kwargs) > 0:
@@ -93,32 +95,26 @@ def get_components(init, policy, solver, recommender, rng):
 
 def solve_bayesopt(objective,
                    bounds,
+                   model,
                    niter=100,
                    init='middle',
                    policy='ei',
                    solver='lbfgs',
                    recommender='latent',
-                   model=None,
-                   noisefree=False,
-                   ftrue=None,
-                   rng=None,
-                   callback=None):
+                   rng=None):
     """
     Maximize the given function using Bayesian Optimization.
 
     Args:
         objective: function handle representing the objective function.
         bounds: bounds of the search space as a (d,2)-array.
+        model: the Bayesian model instantiation.
+
         niter: horizon for optimization.
         init: the initialization component.
         policy: the acquisition component.
         solver: the inner-loop solver component.
         recommender: the recommendation component.
-        model: the Bayesian model instantiation.
-        noisefree: a boolean denoting that the model is noisefree; this only
-                   applies if a default model is used (ie. it is ignored if the
-                   model argument is used).
-        ftrue: a ground-truth function (for evaluation).
         rng: either an RandomState object or an integer used to seed the state;
              this will be fed to each component that requests randomness.
         callback: a function to call on each iteration for visualization.
@@ -139,12 +135,8 @@ def solve_bayesopt(objective,
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
-    # see if the query object itself defines ground truth.
-    if (ftrue is None) and hasattr(objective, 'get_f'):
-        ftrue = objective.get_f
-
     # initialize the random number generator.
-    rng = rstate(rng)
+    rng = random.rstate(rng)
 
     # get the model components.
     init, policy, solver, recommender = \
@@ -154,35 +146,13 @@ def solve_bayesopt(objective,
     X = init(bounds)
     Y = [objective(x) for x in X]
 
-    if model is None:
-        # initialize parameters of a simple GP model.
-        sf = np.std(Y) if (len(Y) > 1) else 10.
-        mu = np.mean(Y)
-        ell = bounds[:, 1] - bounds[:, 0]
-
-        # FIXME: this may not be a great setting for the noise parameter
-        sn = 1e-5 if noisefree else 1e-3
-
-        # specify a hyperprior for the GP.
-        prior = {
-            'sn': (
-                None if noisefree else
-                pygp.priors.Horseshoe(scale=0.1, min=1e-5)),
-            'sf': pygp.priors.LogNormal(mu=np.log(sf), sigma=1., min=1e-6),
-            'ell': pygp.priors.Uniform(ell / 100, ell * 2),
-            'mu': pygp.priors.Gaussian(mu, sf)}
-
-        # create the GP model (with hyperprior).
-        model = pygp.BasicGP(sn, sf, ell, mu, kernel='matern5')
-        model = pygp.meta.MCMC(model, prior, n=10, burn=100, rng=rng)
-
     # add any initial data to our model.
     model.add_data(X, Y)
 
     # allocate a datastructure containing "convergence" info.
     info = np.zeros(niter, [('x', np.float, (len(bounds),)),
-                        ('y', np.float),
-                        ('xbest', np.float, (len(bounds),))])
+                            ('y', np.float),
+                            ('xbest', np.float, (len(bounds),))])
 
     # initialize the data.
     info['x'][:len(X)] = X
@@ -194,19 +164,11 @@ def solve_bayesopt(objective,
         index = policy(model)
         x, _ = solver(index, bounds)
 
-        # deal with any visualization.
-        if callback is not None:
-            callback(model, bounds, info[:i], x, index, ftrue)
-
         # make an observation and record it.
         y = objective(x)
         model.add_data(x, y)
 
         # record everything.
         info[i] = (x, y, recommender(model, bounds))
-
-    if ftrue is not None:
-        fbest = ftrue(info['xbest'])
-        info = append_fields(info, 'fbest', fbest, usemask=False)
 
     return info
