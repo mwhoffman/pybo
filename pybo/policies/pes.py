@@ -10,10 +10,10 @@ import numpy as np
 import scipy.linalg as sla
 import scipy.stats as ss
 
-from mwhutils.linalg import chol_update
-from mwhutils.random import rstate
+import mwhutils.linalg as linalg
+import mwhutils.random as random
+
 from ..solvers import solve_lbfgs
-from ..utils import params
 
 __all__ = ['PES']
 
@@ -114,8 +114,7 @@ def predict(gp, xstar, Xtest):
     return mu, s2
 
 
-@params('nopt', 'nfeat')
-def PES(model, bounds, nopt=50, nfeat=200, rng=None):
+def PES(model, nopt=50, nfeat=200, rng=None):
     rng = rstate(rng)
     funcs = [model.sample_fourier(nfeat, rng) for _ in xrange(nopt)]
     xopts = [solve_lbfgs(f.get, bounds, rng=rng)[0] for f in funcs]
