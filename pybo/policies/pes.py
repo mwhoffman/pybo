@@ -7,33 +7,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import numpy as np
-import scipy.linalg as sla
 import scipy.stats as ss
 
+import mwhutils.linalg as linalg
+
 __all__ = []
-
-
-def chol_update(A, B, C, a, b):
-    """
-    Update the cholesky decomposition of a growing matrix.
-    Let `A` denote a cholesky decomposition of some matrix and `a` the inverse
-    of `A` applied to some vector `y`. This computes the cholesky to a new
-    matrix which has additional elements `B` and the non-diagonal and `C` on
-    the diagonal block. It also computes the solution to the application of the
-    inverse where the vector has additional elements `b`.
-    """
-    n = A.shape[0]
-    m = C.shape[0]
-
-    B = sla.solve_triangular(A, B, trans=True)
-    C = sla.cholesky(C - np.dot(B.T, B))
-    c = np.dot(B.T, a)
-
-    # grow the new cholesky and use then use this to grow the vector a.
-    A = np.r_[np.c_[A, B], np.c_[np.zeros((m, n)), C]]
-    a = np.r_[a, sla.solve_triangular(C, b-c, trans=True)]
-
-    return A, a
 
 
 def get_latent(m0, v0, ymax, sn2):
@@ -73,13 +51,13 @@ def get_predictions(gp, xstar, Xtest):
     # condition on our observations. NOTE: if this is an exact GP, then we've
     # already computed these quantities.
     Kxx = kernel.get_kernel(X) + sn2 * np.eye(X.shape[0])
-    R = sla.cholesky(Kxx)
-    a = sla.solve_triangular(R, y-mean, trans=True)
+    L = linalg.cholesky(Kxx)
+    a = linalg.solve_triangular(L, y-mean)
 
     # condition on the gradient being zero.
     Kgx = kernel.get_gradx(Z, X)[0]
     Kgg = kernel.get_gradxy(Z, Z)[0, 0]
-    R, a = chol_update(R, Kgx, Kgg, a, np.zeros_like(xstar))
+    L, a = linalg.cholesky_update(L, Kgx.T, Kgg, a, np.zeros_like(xstar))
 
     # evaluate the kernel so we can test at the latent optimizer.
     Kzz = kernel.get_kernel(Z)
@@ -89,17 +67,17 @@ def get_predictions(gp, xstar, Xtest):
     ]
 
     # make predictions at the optimizer.
-    B = sla.solve_triangular(R, Kzc.T, trans=True)
+    B = linalg.solve_triangular(L, Kzc.T)
     m0 = mean + float(np.dot(B.T, a))
     v0 = float(Kzz - np.dot(B.T, B))
 
     # get the approximate factors and use this to update the cholesky, which
     # should now be wrt the covariance between [y; g; f(z)].
     m, v = get_latent(m0, v0, max(y), sn2)
-    R, a = chol_update(R, Kzc.T, Kzz + v, a, m - mean)
+    L, a = linalg.cholesky_update(L, Kzc, Kzz + v, a, m - mean)
 
     # get predictions at the optimum.
-    Bstar = sla.solve_triangular(R, np.c_[Kzc, Kzz].T, trans=True)
+    Bstar = linalg.solve_triangular(L, np.c_[Kzc, Kzz].T)
     mustar = mean + float(np.dot(Bstar.T, a))
     s2star = float(kernel.get_dkernel(Z) - np.sum(Bstar**2, axis=0))
 
@@ -113,7 +91,7 @@ def get_predictions(gp, xstar, Xtest):
 
     # get the marginal posterior without the constraint that the function at
     # the optimum is better than the function at test points.
-    B = sla.solve_triangular(R, Ktc.T, trans=True)
+    B = linalg.solve_triangular(L, Ktc.T)
     mu = mean + np.dot(B.T, a)
     s2 = kernel.get_dkernel(Xtest) - np.sum(B**2, axis=0)
 
