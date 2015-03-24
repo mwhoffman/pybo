@@ -6,9 +6,10 @@ import mwhutils.plotting as mp
 import pybo.policies.pes
 
 
-def visualize_pes(xmax):
+if __name__ == '__main__':
     # seed the rng
     rng = random.rstate(0)
+    xmax = 0.2
 
     # generate data from a GP prior.
     X = rng.rand(20, 1)
@@ -23,6 +24,10 @@ def visualize_pes(xmax):
     # get the test locations.
     z = np.linspace(X.min(), X.max(), 200)
 
+    # get the PES index.
+    bounds = np.array([[X.min(), X.max()]])
+    index = pybo.policies.PES(gp, bounds, rng=rng)
+
     # # get the "prior" predictions.
     mu0, s20 = gp.get_posterior(z[:, None])
     lo0 = mu0 - 2*np.sqrt(s20)
@@ -33,14 +38,11 @@ def visualize_pes(xmax):
     lo1 = mu1 - 2*np.sqrt(s21)
     hi1 = mu1 + 2*np.sqrt(s21)
 
-    fig = mp.figure(1)
-    fig.scatter(X.ravel(), Y)
-    fig.plot_banded(z, mu0, lo0, hi0)
-    fig.plot_banded(z, mu1, lo1, hi1)
-    fig.vline(xmax)
-    fig.remove_ticks()
+    fig = mp.figure(1, 2)
+    fig[0].scatter(X.ravel(), Y)
+    fig[0].plot_banded(z, mu0, lo0, hi0)
+    fig[0].plot_banded(z, mu1, lo1, hi1)
+    fig[0].vline(xmax)
+
+    fig[1].plot_banded(z, index(z[:, None]))
     fig.draw()
-
-
-if __name__ == '__main__':
-    visualize_pes(0.2)
