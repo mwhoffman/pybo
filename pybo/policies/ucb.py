@@ -11,7 +11,7 @@ import numpy as np
 __all__ = ['UCB']
 
 
-def UCB(model, delta=0.1, xi=0.2):
+def UCB(model, bounds, delta=0.1, xi=0.2):
     """
     The (GP)UCB acquisition function where `delta` is the probability that the
     upper bound holds and `xi` is a multiplicative modification of the
