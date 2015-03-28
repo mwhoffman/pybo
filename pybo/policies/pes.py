@@ -104,7 +104,7 @@ def get_predictions(gp, xstar, Xtest):
     s = s2 + s2star - 2*rho
 
     while any(s < 1e-10):
-        rho[s < 1e-10] *= 1 - 1e-4
+        rho[s < 1e-10] *= 1 - 1e-10
         s = s2 + s2star - 2*rho
 
     a = (mustar - mu) / np.sqrt(s)

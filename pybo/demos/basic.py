@@ -21,12 +21,12 @@ if __name__ == '__main__':
     Y = np.array([f(x_) for x_ in X])
 
     # initialize the model
-    model = reggie.BasicGP(0.1, 1.9, 0.5, 0)
+    model = reggie.BasicGP(0.1, 1.9, 0.1, 0)
     model.add_data(X, Y)
 
     while True:
         xbest = recommenders.best_latent(model, bounds)
-        index = policies.EI(model, bounds)
+        index = policies.PES(model, bounds)
         xnext, _ = solvers.solve_direct(index, bounds)
 
         mu, s2 = model.get_posterior(x[:, None])
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
         # plot the posterior
         fig[1].plot_banded(x, mu, lo, hi)
-        fig[1].plot(x, f.get(x), ls='--', color='k')
+        fig[1].plot(x, f.get_f(x[:, None]), ls='--', color='k')
         fig[1].vline(xbest)
         fig[1].vline(f.xopt)
 
