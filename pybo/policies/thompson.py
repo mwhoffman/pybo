@@ -70,7 +70,7 @@ class FourierSample(object):
         return F, G
 
 
-def Thompson(model, n=100, rng=None):
+def Thompson(model, bounds, n=100, rng=None):
     """
     Implementation of Thompson sampling for continuous models using a finite
     approximation to the kernel matrix with `n` Fourier components.

@@ -11,38 +11,40 @@ from pybo import recommenders
 
 if __name__ == '__main__':
     # grab a test function and points at which to plot things
-    f = benchfunk.Gramacy(0.2)
-    x = np.linspace(f.bounds[0, 0], f.bounds[0, 1], 500)
+    f = benchfunk.Gramacy(0.1)
+    bounds = f.bounds
 
     # get initial data
-    X = inits.init_latin(f.bounds, 20)
-    Y = f.get(X)
+    X = inits.init_latin(bounds, 3)
+    Y = np.array([f(x_) for x_ in X])
 
     # initialize the model
-    model = reggie.BasicGP(0.2, 1.9, 0.1, -1)
+    model = reggie.BasicGP(0.1, 1.9, 0.1, 0)
     model.add_data(X, Y)
 
     while True:
-        xbest = recommenders.best_incumbent(model, f.bounds)
-        index = policies.Thompson(model)
-        xnext, _ = solvers.solve_lbfgs(index, f.bounds)
+        xbest = recommenders.best_latent(model, bounds)
+        index = policies.EI(model, bounds)
+        xnext, _ = solvers.solve_lbfgs(index, bounds)
 
+        # get the posterior at test points
+        x = np.linspace(bounds[0][0], bounds[0][1], 500)
         mu, s2 = model.get_posterior(x[:, None])
-        lo = mu - 2*np.sqrt(s2)
-        hi = mu + 2*np.sqrt(s2)
 
-        # plot the observed data
-        fig = mp.figure(1, 3)
-        fig[0].scatter(model.data[0].ravel(), model.data[1])
+        # create a figure and hold it
+        fig = mp.figure(num=1, rows=2)
+        fig.hold()
 
         # plot the posterior
-        fig[1].plot_banded(x, mu, lo, hi)
-        fig[1].plot(x, f.get_f(x[:, None]), ls='--', color='k')
-        fig[1].vline(xbest)
+        fig[0].plot_banded(x, mu, 2*np.sqrt(s2))
+        fig[0].plot(x, f.get_f(x[:, None]))
+        fig[0].scatter(model.data[0].ravel(), model.data[1])
+        fig[0].vline(xbest)
+        fig[0].vline(f.xopt)
 
         # plot the acquisition function
-        fig[2].plot_banded(x, index(x[:, None]))
-        fig[2].vline(xnext)
+        fig[1].plot_banded(x, index(x[:, None]))
+        fig[1].vline(xnext)
 
         # draw
         fig.draw()

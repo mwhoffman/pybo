@@ -161,7 +161,7 @@ def solve_bayesopt(objective,
 
     for i in xrange(model.ndata, niter):
         # get the next point to evaluate.
-        index = policy(model)
+        index = policy(model, bounds)
         x, _ = solver(index, bounds)
 
         # make an observation and record it.

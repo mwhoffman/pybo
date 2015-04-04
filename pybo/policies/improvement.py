@@ -28,7 +28,7 @@ def _integrate(index, models):
     return index2
 
 
-def EI(model, xi=0.0):
+def EI(model, bounds, xi=0.0):
     """
     Expected improvement policy with an exploration parameter of `xi`.
     """
@@ -67,7 +67,7 @@ def EI(model, xi=0.0):
         return index
 
 
-def PI(model, xi=0.05):
+def PI(model, bounds, xi=0.05):
     """
     Probability of improvement policy with an exploration parameter of `xi`.
     """
