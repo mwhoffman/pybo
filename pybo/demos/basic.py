@@ -25,7 +25,7 @@ if __name__ == '__main__':
     while True:
         xbest = recommenders.best_latent(model, bounds)
         index = policies.EI(model, bounds)
-        xnext, _ = solvers.solve_direct(index, bounds)
+        xnext, _ = solvers.solve_lbfgs(index, bounds)
 
         # get the posterior at test points
         x = np.linspace(bounds[0][0], bounds[0][1], 500)
