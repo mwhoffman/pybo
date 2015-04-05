@@ -153,30 +153,32 @@ def solve_bayesopt(objective,
                      ('xbest', np.float, (len(bounds),))])
     ninit = 0
 
+    # initialize model
     if model.ndata == 0:
         # create a list of initial points to query.
         X = init(bounds)
 
-        # warn if initialization goes over budget
         if len(X) > niter:
-            message = 'initialization samples exceeds evaluation budget '
-            message += '`niter`, will stick to user-defined budget so no '
-            message += 'Bayesian optimization happened.'
-            warnings.warn(message, stacklevel=3)
+            # warn if initialization goes over budget
+            msg = 'initialization samples exceeded evaluation budget `niter`'
+            warnings.warn(msg, stacklevel=2)
 
-        Y = [objective(x) for x in X[:niter]]
+            # truncate initial samples to budget
+            X = X[:niter]
 
-        # add any initial data to our model.
-        model.add_data(X, Y)
+        Y = [objective(x) for x in X]
+
+
+        for i, (x, y) in enumerate(zip(X, Y)):
+            model.add_data(x, y)
+
+            # record everything.
+            info[i] = (x, y, recommender(model, bounds))
 
         # deduct initial points from requested number of iterations
         ninit = model.ndata
 
-        # initialize the data.
-        info['x'][:ninit] = X
-        info['y'][:ninit] = Y
-        info['xbest'][:ninit] = [X[np.argmax(Y[:i+1])] for i in xrange(ninit)]
-
+    # Bayesian optimization loop
     for i in xrange(ninit, niter):
         # get the next point to evaluate.
         index = policy(model, bounds)
