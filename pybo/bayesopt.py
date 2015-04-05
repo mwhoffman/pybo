@@ -11,6 +11,7 @@ from __future__ import print_function
 import numpy as np
 import inspect
 import functools
+import warnings
 import mwhutils.random as random
 
 # each method/class defined exported by these modules will be exposed as a
@@ -97,7 +98,7 @@ def solve_bayesopt(objective,
                    bounds,
                    model,
                    niter=100,
-                   init='middle',
+                   init='latin',
                    policy='ei',
                    solver='lbfgs',
                    recommender='latent',
@@ -132,6 +133,9 @@ def solve_bayesopt(objective,
         query locations, outputs, and recommendations at each iteration. If
         ground-truth is known an additional field `fbest` will be included.
     """
+    # make a copy of model
+    model = model.copy()
+
     # make sure the bounds are a 2d-array.
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
@@ -142,24 +146,40 @@ def solve_bayesopt(objective,
     init, policy, solver, recommender = \
         get_components(init, policy, solver, recommender, rng)
 
-    # create a list of initial points to query.
-    X = init(bounds)
-    Y = [objective(x) for x in X]
-
-    # add any initial data to our model.
-    model.add_data(X, Y)
-
     # allocate a datastructure containing "convergence" info.
-    info = np.zeros(niter, [('x', np.float, (len(bounds),)),
-                            ('y', np.float),
-                            ('xbest', np.float, (len(bounds),))])
+    info = np.zeros(niter,
+                    [('x', np.float, (len(bounds),)),
+                     ('y', np.float),
+                     ('xbest', np.float, (len(bounds),))])
+    ninit = 0
 
-    # initialize the data.
-    info['x'][:len(X)] = X
-    info['y'][:len(Y)] = Y
-    info['xbest'][:len(Y)] = [X[np.argmax(Y[:i+1])] for i in xrange(len(Y))]
+    # initialize model
+    if model.ndata == 0:
+        # create a list of initial points to query.
+        X = init(bounds)
 
-    for i in xrange(model.ndata, niter):
+        if len(X) > niter:
+            # warn if initialization goes over budget
+            msg = 'initialization samples exceeded evaluation budget `niter`'
+            warnings.warn(msg, stacklevel=2)
+
+            # truncate initial samples to budget
+            X = X[:niter]
+
+        Y = [objective(x) for x in X]
+
+
+        for i, (x, y) in enumerate(zip(X, Y)):
+            model.add_data(x, y)
+
+            # record everything.
+            info[i] = (x, y, recommender(model, bounds))
+
+        # deduct initial points from requested number of iterations
+        ninit = model.ndata
+
+    # Bayesian optimization loop
+    for i in xrange(ninit, niter):
         # get the next point to evaluate.
         index = policy(model, bounds)
         x, _ = solver(index, bounds)
@@ -171,4 +191,4 @@ def solve_bayesopt(objective,
         # record everything.
         info[i] = (x, y, recommender(model, bounds))
 
-    return info
+    return info, model
