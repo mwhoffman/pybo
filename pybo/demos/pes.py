@@ -13,11 +13,11 @@ if __name__ == '__main__':
 
     # generate data from a GP prior.
     X = rng.rand(20, 1)
-    Y = (reggie.BasicGP(sn2=0.1, rho=1, ell=0.05, kernel='matern3')
+    Y = (reggie.make_gp(sn2=0.1, rho=1, ell=0.05, kernel='matern3')
          .sample(X, latent=False, rng=rng))
 
     # create a new GP; note the different kernel
-    gp = reggie.BasicGP(sn2=0.1, rho=1, ell=0.25)
+    gp = reggie.make_gp(sn2=0.1, rho=1, ell=0.25)
     gp.add_data(X, Y)
     gp.optimize()
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     index = pybo.policies.PES(gp, bounds, rng=rng)
 
     # # get the "prior" predictions.
-    mu0, s20 = gp.get_posterior(z[:, None])
+    mu0, s20 = gp.predict(z[:, None])
     lo0 = mu0 - 2*np.sqrt(s20)
     hi0 = mu0 + 2*np.sqrt(s20)
 

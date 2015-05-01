@@ -44,9 +44,9 @@ def get_predictions(gp, xstar, Xtest):
     Given a GP posterior and a sampled location xstar return marginal
     predictions at Xtest conditioned on the fact that xstar is a minimizer.
     """
-    sn2 = gp._sn2
-    kernel = gp._kernel
-    mean = gp._mean
+    sn2 = gp._post.like.get_variance()
+    kernel = gp._post.kern
+    mean = gp._post.mean
 
     # format the optimum location as a (1,d) array.
     X, Y = gp.data
@@ -124,9 +124,9 @@ def PES(model, bounds, nopt=50, nfeat=200, rng=None):
     def index(X, grad=False):
         if grad:
             raise NotImplementedError
-        s2_pred = model.get_posterior(X)[1] + model._sn2
+        s2_pred = model.predict(X)[1] + model._post.like.get_variance()
         s2_cond = [get_predictions(model, xopt, X)[1] for xopt in xopts]
-        s2_cond = np.array(s2_cond) + model._sn2
+        s2_cond = np.array(s2_cond) + model._post.like.get_variance()
         H = 0.5 * (np.log(s2_pred) - np.sum(np.log(s2_cond), axis=0) / nopt)
         return H
 

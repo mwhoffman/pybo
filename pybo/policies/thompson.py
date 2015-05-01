@@ -20,7 +20,7 @@ class FourierSample(object):
         rng = random.rstate(rng)
 
         # randomize the feature
-        W, a = model._post.kernel.sample_spectrum(n, rng)
+        W, a = model._post.kern.sample_spectrum(n, rng)
 
         self._W = W
         self._b = rng.rand(n) * 2 * np.pi
