@@ -20,12 +20,12 @@ class FourierSample(object):
         rng = random.rstate(rng)
 
         # randomize the feature
-        W, a = model._kernel.sample_spectrum(n, rng)
+        W, a = model._post.kernel.sample_spectrum(n, rng)
 
         self._W = W
         self._b = rng.rand(n) * 2 * np.pi
         self._a = np.sqrt(2*a/n)
-        self._mean = model._mean.copy()
+        self._mean = model._post.mean.copy()
         self._theta = None
 
         if model.ndata > 0:
@@ -35,11 +35,11 @@ class FourierSample(object):
 
             # get the components for regression
             A = np.dot(Phi.T, Phi)
-            A = linalg.add_diagonal(A, model._sn2)
+            A = linalg.add_diagonal(A, model._post.like.get_variance())
 
             L = linalg.cholesky(A)
             r = Y - self._mean.get_function(X)
-            p = np.sqrt(model._sn2) * rng.randn(n)
+            p = np.sqrt(model._post.like.get_variance()) * rng.randn(n)
 
             self._theta = linalg.solve_cholesky(L, np.dot(Phi.T, r))
             self._theta += linalg.solve_triangular(L, p, True)

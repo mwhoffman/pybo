@@ -19,17 +19,17 @@ if __name__ == '__main__':
     Y = np.array([f(x_) for x_ in X])
 
     # initialize the model
-    model = reggie.BasicGP(0.1, 1.9, 0.1, 0)
+    model = reggie.make_gp(0.1, 1.9, 0.1, 0)
     model.add_data(X, Y)
 
     while True:
         xbest = recommenders.best_latent(model, bounds)
-        index = policies.EI(model, bounds)
+        index = policies.UCB(model, bounds)
         xnext, _ = solvers.solve_lbfgs(index, bounds)
 
         # get the posterior at test points
         x = np.linspace(bounds[0][0], bounds[0][1], 500)
-        mu, s2 = model.get_posterior(x[:, None])
+        mu, s2 = model.predict(x[:, None])
 
         # create a figure and hold it
         fig = mp.figure(num=1, rows=2)
