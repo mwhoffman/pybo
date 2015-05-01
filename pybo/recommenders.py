@@ -19,9 +19,9 @@ def best_latent(model, bounds):
     def mu(X, grad=False):
         """Posterior mean objective function."""
         if grad:
-            return model.get_posterior(X, True)[::2]
+            return model.predict(X, True)[::2]
         else:
-            return model.get_posterior(X)[0]
+            return model.predict(X)[0]
     xgrid, _ = model.data
     xbest, _ = solvers.solve_lbfgs(mu, bounds, xgrid=xgrid)
     return xbest
@@ -33,7 +33,7 @@ def best_incumbent(model, _):
     at points seen so far.
     """
     X, _ = model.data
-    f, _ = model.get_posterior(X)
+    f, _ = model.predict(X)
     return X[f.argmax()]
 
 

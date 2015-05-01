@@ -33,13 +33,13 @@ def EI(model, bounds, xi=0.0):
     Expected improvement policy with an exploration parameter of `xi`.
     """
     X, _ = model.data
-    f, _ = model.get_posterior(X)
+    f, _ = model.predict(X)
     target = f.max() + xi
 
     # define the index wrt a single model (that should act like a GP model, ie
     # in that it is marginally Gaussian and defines the posterior method).
     def index(X, grad=False, model=model):
-        posterior = model.get_posterior(X, grad=grad)
+        posterior = model.predict(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
         d = mu - target
@@ -72,11 +72,11 @@ def PI(model, bounds, xi=0.05):
     Probability of improvement policy with an exploration parameter of `xi`.
     """
     X, _ = model.data
-    f, _ = model.get_posterior(X)
+    f, _ = model.predict(X)
     target = f.max() + xi
 
     def index(X, grad=False, model=model):
-        posterior = model.get_posterior(X, grad=grad)
+        posterior = model.predict(X, grad=grad)
         mu, s2 = posterior[:2]
         s = np.sqrt(s2)
         d = mu - target

@@ -22,7 +22,7 @@ def UCB(model, bounds, delta=0.1, xi=0.2):
     b = xi * (4 + d)
 
     def index(X, grad=False):
-        posterior = model.get_posterior(X, grad=grad)
+        posterior = model.predict(X, grad=grad)
         mu, s2 = posterior[:2]
         beta = a + b * np.log(model.ndata + 1)
         if grad:
