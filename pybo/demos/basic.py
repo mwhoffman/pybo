@@ -11,20 +11,29 @@ from pybo import recommenders
 
 if __name__ == '__main__':
     # grab a test function and points at which to plot things
-    f = benchfunk.Gramacy(0.1)
+    f = benchfunk.Gramacy(0.01)
+    # f = benchfunk.Sinusoidal(0.01)
     bounds = f.bounds
 
     # get initial data
-    X = inits.init_latin(bounds, 3)
+    X = inits.init_latin(bounds, 10)
     Y = np.array([f(x_) for x_ in X])
 
     # initialize the model
-    model = reggie.make_gp(0.1, 1.9, 0.1, 0)
+    model = reggie.make_gp(0.01, 1.9, 0.1, 0)
     model.add_data(X, Y)
+
+    model.params['like.sn2'].set_prior('uniform', 0.005, 0.015)
+
+    model.params['kern.rho'].set_prior('lognormal', 0, 100)
+    model.params['kern.ell'].set_prior('lognormal', 0, 10)
+    model.params['mean.bias'].set_prior('normal', 0, 20)
+
+    model = reggie.MCMC(model, n=20, rng=None)
 
     while True:
         xbest = recommenders.best_latent(model, bounds)
-        index = policies.UCB(model, bounds)
+        index = policies.EI(model, bounds, 0.1)
         xnext, _ = solvers.solve_lbfgs(index, bounds)
 
         # get the posterior at test points
