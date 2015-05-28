@@ -12,7 +12,6 @@ import scipy.stats as ss
 import mwhutils.linalg as linalg
 import mwhutils.random as random
 
-from .thompson import FourierSample
 from ..solvers import solve_lbfgs
 
 __all__ = ['PES']
@@ -118,7 +117,7 @@ def get_predictions(gp, xstar, Xtest):
 
 def PES(model, bounds, nopt=50, nfeat=200, rng=None):
     rng = random.rstate(rng)
-    funcs = [FourierSample(model, nfeat, rng) for _ in xrange(nopt)]
+    funcs = [model.sample_f(nfeat, rng) for _ in xrange(nopt)]
     xopts = [solve_lbfgs(f.get, bounds, rng=rng)[0] for f in funcs]
 
     def index(X, grad=False):

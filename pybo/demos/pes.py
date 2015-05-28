@@ -29,19 +29,15 @@ if __name__ == '__main__':
     index = pybo.policies.PES(gp, bounds, rng=rng)
 
     # # get the "prior" predictions.
-    mu0, s20 = gp.predict(z[:, None])
-    lo0 = mu0 - 2*np.sqrt(s20)
-    hi0 = mu0 + 2*np.sqrt(s20)
+    mu, s2 = gp.predict(z[:, None])
 
     # get the "posterior" predictions.
-    mu1, s21 = pybo.policies.pes.get_predictions(gp, xmax, z[:, None])
-    lo1 = mu1 - 2*np.sqrt(s21)
-    hi1 = mu1 + 2*np.sqrt(s21)
+    mu_, s2_ = pybo.policies.pes.get_predictions(gp, xmax, z[:, None])
 
     fig = mp.figure(1, 2)
     fig[0].scatter(X.ravel(), Y)
-    fig[0].plot_banded(z, mu0, lo0, hi0)
-    fig[0].plot_banded(z, mu1, lo1, hi1)
+    fig[0].plot_banded(z, mu, 2*np.sqrt(s2))
+    fig[0].plot_banded(z, mu_, 2*np.sqrt(s2_))
     fig[0].vline(xmax)
 
     fig[1].plot_banded(z, index(z[:, None]))
