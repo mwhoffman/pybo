@@ -16,9 +16,13 @@ def EI(model, _, xi=0.0):
     """
     Expected improvement policy with an exploration parameter of `xi`.
     """
+    X = model.data[0]
+    x = X[model.predict(X)[0].argmax()]
+
     def index(X, grad=False):
         """EI policy instance."""
-        return model.get_improvement(X, xi, grad)
+        return model.get_improvement(X, x, xi, grad)
+
     return index
 
 
@@ -26,9 +30,13 @@ def PI(model, _, xi=0.05):
     """
     Probability of improvement policy with an exploration parameter of `xi`.
     """
+    X = model.data[0]
+    x = X[model.predict(X)[0].argmax()]
+
     def index(X, grad=False):
         """PI policy instance."""
-        return model.get_improvement(X, xi, grad, pi=True)
+        return model.get_improvement(X, x, xi, grad, pi=True)
+
     return index
 
 
