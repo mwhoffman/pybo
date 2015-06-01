@@ -22,10 +22,7 @@ def get_factors(m0, V0, fstar):
     rho_ = np.zeros_like(m0)
     tau_ = np.zeros_like(m0)
 
-    # don't do damping in the first iteration
-    damping = 1
-
-    for _ in xrange(10):
+    while True:
         # get the canonical form marginals
         tau = 1 / V.diagonal()
         rho = m / V.diagonal()
@@ -42,7 +39,6 @@ def get_factors(m0, V0, fstar):
 
         # get the new factors
         tauNew = gamma / (1 - gamma*v)
-        tauNew[np.abs(tauNew) < 1e-300] = 1e-300
         rhoNew = (m - 1 / kappa) * tauNew
 
         # don't change anything that ends up with a negative variance.
@@ -50,36 +46,19 @@ def get_factors(m0, V0, fstar):
         tauNew[negv] = tau_[negv]
         rhoNew[negv] = rho_[negv]
 
-        while False:
-            tauNew = tauNew * damping + tau_ * (1-damping)
-            rhoNew = rhoNew * damping + rho_ * (1-damping)
-
-            # get the eigenvalues of the new posterior covariance and mix more
-            # with the old approximation if they're blowing up.
-            vals, _ = np.linalg.eig(np.diag(1/tauNew) + V0)
-
-            if any(1/vals <= 1e-10):
-                damping *= 0.5
-            else:
-                break
-
         # update the EP factors
         tau_ = tauNew
         rho_ = rhoNew
 
-        print(tau_)
-        print(rho_)
-
         # the new posterior.
-        L = linalg.cholesky(V0 + np.diag(1/tau_))
-        V = linalg.solve_triangular(L, V0)
+        t = np.sqrt(tau_)
+        L = linalg.cholesky(linalg.add_diagonal(t*V0*t[:, None], 1))
+        V = linalg.solve_triangular(L, V0*t[:, None])
         V = V0 - np.dot(V.T, V)
-        m = np.dot(V, rho_) + linalg.solve_cholesky(L, m0) / tau_
+        m = np.dot(V, rho_) + linalg.solve_cholesky(L, t*m0) / t
 
-        # if np.max(np.abs(np.r_[V.diagonal() - 1/tau, m - rho/tau])) >= 1e-6:
-        #     damping *= 0.99
-        # else:
-        #     break
+        if np.max(np.abs(np.r_[V.diagonal() - 1/tau, m - rho/tau])) >= 1e-6:
+            break
 
     return rho_, tau_
 
