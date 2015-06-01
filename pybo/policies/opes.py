@@ -16,9 +16,72 @@ __all__ = []
 
 
 def get_factors(m0, V0, fstar):
-    eta = np.zeros_like(m0)
-    rho = np.zeros_like(m0)
-    return eta, rho
+    # initialize the current state of the posterior as well as the EP factors
+    # in canonical form.
+    m, V = m0, V0
+    rho_ = np.zeros_like(m0)
+    tau_ = np.zeros_like(m0)
+
+    # don't do damping in the first iteration
+    damping = 1
+
+    for _ in xrange(10):
+        # get the canonical form marginals
+        tau = 1 / V.diagonal()
+        rho = m / V.diagonal()
+
+        # eliminate the contribution of the EP factors
+        v = (tau - tau_) ** -1
+        m = v * (rho - rho_)
+
+        sigma = np.sqrt(v)
+        alpha = (fstar - m) / sigma
+        ratio = np.exp(ss.norm.logpdf(alpha) - ss.norm.logcdf(alpha))
+        kappa = (ratio + alpha) / sigma
+        gamma = ratio * kappa / sigma
+
+        # get the new factors
+        tauNew = gamma / (1 - gamma*v)
+        tauNew[np.abs(tauNew) < 1e-300] = 1e-300
+        rhoNew = (m - 1 / kappa) * tauNew
+
+        # don't change anything that ends up with a negative variance.
+        negv = (v < 0)
+        tauNew[negv] = tau_[negv]
+        rhoNew[negv] = rho_[negv]
+
+        while False:
+            tauNew = tauNew * damping + tau_ * (1-damping)
+            rhoNew = rhoNew * damping + rho_ * (1-damping)
+
+            # get the eigenvalues of the new posterior covariance and mix more
+            # with the old approximation if they're blowing up.
+            vals, _ = np.linalg.eig(np.diag(1/tauNew) + V0)
+
+            if any(1/vals <= 1e-10):
+                damping *= 0.5
+            else:
+                break
+
+        # update the EP factors
+        tau_ = tauNew
+        rho_ = rhoNew
+
+        print(tau_)
+        print(rho_)
+
+        # the new posterior.
+        L = linalg.cholesky(V0 + np.diag(1/tau_))
+        V = linalg.solve_triangular(L, V0)
+        V = V0 - np.dot(V.T, V)
+        m = np.dot(V, rho_) + linalg.solve_cholesky(L, m0) / tau_
+
+        # if np.max(np.abs(np.r_[V.diagonal() - 1/tau, m - rho/tau])) >= 1e-6:
+        #     damping *= 0.99
+        # else:
+        #     break
+
+    return rho_, tau_
 
 
 def get_predictions(gp, fstar, Xtest):
@@ -46,8 +109,8 @@ def get_predictions(gp, fstar, Xtest):
     V0 = K - np.dot(A.T, A)
 
     # get predictions of the latent variables at the observed inputs
-    eta, rho = get_factors(m0, V0, fstar)
-    omega = sn2 / (1 + sn2*rho)
+    rho, tau = get_factors(m0, V0, fstar)
+    omega = sn2 / (1 + sn2*tau)
 
     # get the cholesky of the kernel with omega on its diagonal
     L = linalg.cholesky(linalg.add_diagonal(K, omega))
@@ -55,7 +118,7 @@ def get_predictions(gp, fstar, Xtest):
     # now evaluate the kernel at the new points and compute intermediate terms
     K = kern.get_kernel(X, Xtest)
     A = linalg.solve_triangular(L, K)
-    a = linalg.solve_triangular(L, omega * (R/sn2 + eta))
+    a = linalg.solve_triangular(L, omega * (R/sn2 + rho))
 
     # get the predictions
     mu = mean.get_function(Xtest) + np.dot(A.T, a)
