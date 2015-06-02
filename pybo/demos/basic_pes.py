@@ -13,15 +13,15 @@ from pybo import recommenders
 
 if __name__ == '__main__':
     # grab a test function and points at which to plot things
-    s = 0.001
-    model = reggie.make_gp(s, 1.1, 0.05, 0)
+    s = 0.5
+    model = reggie.make_gp(s, 1.1, 0.02, 0)
     bounds = [[0, 5]]
 
-    f = benchfunk.PriorFunction(model, bounds, 100)
+    f = benchfunk.PriorFunction(model, bounds, 100, 2)
     x = mg.regular(bounds, 500)
 
     # get initial data
-    X = inits.init_latin(bounds, 1)
+    X = inits.init_middle(bounds)
     Y = np.array([f(x_) for x_ in X])
 
     # initialize the model
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     while True:
         xbest = recommenders.best_latent(model, bounds)
-        index = policies.PES(model, bounds)(x)
+        index = policies.OPES(model, bounds)(x)
         xnext = x[index.argmax()]
 
         # get the posterior at test points
