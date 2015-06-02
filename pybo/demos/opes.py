@@ -9,7 +9,7 @@ import pybo.policies.opes
 if __name__ == '__main__':
     # seed the rng
     rng = random.rstate(0)
-    fmax = 2.0
+    fmax = 0.0
 
     # generate data from a GP prior.
     X = rng.rand(20, 1)
@@ -33,9 +33,9 @@ if __name__ == '__main__':
     # get the "posterior" predictions.
     mu_, s2_ = pybo.policies.opes.get_predictions(gp, fmax, z[:, None])
 
-    fig = mp.figure(1, 2)
-    fig[0].scatter(X.ravel(), Y)
-    fig[0].plot_banded(z, mu, 2*np.sqrt(s2))
-    fig[0].plot_banded(z, mu_, 2*np.sqrt(s2_))
-    fig[0].hline(fmax)
+    fig = mp.figure(1)
+    fig.scatter(X.ravel(), Y)
+    fig.plot_banded(z, mu, 2*np.sqrt(s2))
+    fig.plot_banded(z, mu_, 2*np.sqrt(s2_))
+    fig.hline(fmax)
     fig.draw()

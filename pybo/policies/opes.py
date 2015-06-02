@@ -87,11 +87,11 @@ def get_predictions(gp, fstar, Xtest):
     m0 = m + np.dot(A.T, a)
     V0 = K - np.dot(A.T, A)
 
-    # get predictions of the latent variables at the observed inputs
+    # get the EP factors
     rho, tau = get_factors(m0, V0, fstar)
     omega = sn2 / (1 + sn2*tau)
 
-    # get the cholesky of the kernel with omega on its diagonal
+    # get the cholesky of the covariance including the EP factors
     L = linalg.cholesky(linalg.add_diagonal(K, omega))
 
     # now evaluate the kernel at the new points and compute intermediate terms
@@ -99,8 +99,15 @@ def get_predictions(gp, fstar, Xtest):
     A = linalg.solve_triangular(L, K)
     a = linalg.solve_triangular(L, omega * (R/sn2 + rho))
 
-    # get the predictions
-    mu = mean.get_function(Xtest) + np.dot(A.T, a)
-    s2 = kern.get_dkernel(Xtest) - np.sum(A**2, axis=0)
+    # get the predictions before the final constraint
+    m1 = mean.get_function(Xtest) + np.dot(A.T, a)
+    v1 = kern.get_dkernel(Xtest) - np.sum(A**2, axis=0)
+
+    sigma = np.sqrt(v1)
+    alpha = (fstar - m1) / sigma
+    ratio = np.exp(ss.norm.logpdf(alpha) - ss.norm.logcdf(alpha))
+
+    mu = m1 - ratio * sigma
+    s2 = v1 - v1 * ratio * (ratio + alpha)
 
     return mu, s2
