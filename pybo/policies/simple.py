@@ -40,11 +40,17 @@ def PI(model, _, xi=0.05):
     return index
 
 
-def Thompson(model, _, n=100, rng=None):
+def Thompson(model, bounds, n=100, rng=None):
     """
     Thompson sampling policy.
     """
-    return model.sample_f(n, rng).get
+    if bounds.ndim == 2:
+        return model.sample_f(n, rng).get
+    else:
+        f = model.sample(bounds, rng)
+        def index(X):
+            return f[np.array(X, dtype=int).ravel()]
+        return index
 
 
 def UCB(model, _, delta=0.1, xi=0.2):

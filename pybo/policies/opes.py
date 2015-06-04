@@ -140,7 +140,7 @@ def OPES(model, bounds, nopt=50, nfeat=200, rng=None):
         funcs = [model.sample_f(nfeat, rng) for _ in xrange(nopt)]
         fopts = [solve_lbfgs(f.get, bounds, rng=rng)[1] for f in funcs]
     else:
-        fopts = [model.sample(bounds).max() for _ in xrange(nopt)]
+        fopts = [model.sample(bounds, rng).max() for _ in xrange(nopt)]
 
     preds = [Predictor(model, fopt) for fopt in fopts]
 
