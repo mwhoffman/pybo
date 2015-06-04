@@ -18,12 +18,18 @@ __all__ = ['OPES']
 
 
 def get_factors(m0, V0, fstar):
+    """
+    Given a Gaussian distribution with mean and covariance (m0, V0) use EP to
+    find a Gaussian approximating the constraint that each latent variable is
+    below fstar. Return the approximate factors (rho_, tau_) in canonical form.
+    """
     # initialize the current state of the posterior as well as the EP factors
     # in canonical form.
     m, V = m0, V0
     rho_ = np.zeros_like(m0)
     tau_ = np.zeros_like(m0)
 
+    # no damping on the first iteration
     damping = 1
 
     while True:
@@ -129,8 +135,13 @@ class Predictor(object):
 
 def OPES(model, bounds, nopt=50, nfeat=200, rng=None):
     rng = random.rstate(rng)
-    funcs = [model.sample_f(nfeat, rng) for _ in xrange(nopt)]
-    fopts = [solve_lbfgs(f.get, bounds, rng=rng)[1] for f in funcs]
+
+    if bounds.ndim == 2:
+        funcs = [model.sample_f(nfeat, rng) for _ in xrange(nopt)]
+        fopts = [solve_lbfgs(f.get, bounds, rng=rng)[1] for f in funcs]
+    else:
+        fopts = [model.sample(bounds).max() for _ in xrange(nopt)]
+
     preds = [Predictor(model, fopt) for fopt in fopts]
 
     def index(X, grad=False):
