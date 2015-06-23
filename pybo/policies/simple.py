@@ -7,9 +7,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-__all__ = ['EI', 'PI', 'UCB', 'Thompson']
-
 import numpy as np
+
+__all__ = ['EI', 'PI', 'UCB', 'Thompson']
 
 
 def EI(model, _, xi=0.0):
@@ -40,17 +40,11 @@ def PI(model, _, xi=0.05):
     return index
 
 
-def Thompson(model, bounds, n=100, rng=None):
+def Thompson(model, _, n=100, rng=None):
     """
     Thompson sampling policy.
     """
-    if bounds.ndim == 2:
-        return model.sample_f(n, rng).get
-    else:
-        f = model.sample(bounds, rng)
-        def index(X):
-            return f[np.array(X, dtype=int).ravel()]
-        return index
+    return model.sample_f(n, rng).get
 
 
 def UCB(model, _, delta=0.1, xi=0.2):
