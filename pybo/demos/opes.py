@@ -9,7 +9,7 @@ import pybo.policies.opes
 if __name__ == '__main__':
     # seed the rng
     rng = random.rstate(0)
-    fmax = 1
+    fmax = 2
 
     # generate data from a GP prior.
     X = rng.rand(20, 1)
@@ -31,14 +31,20 @@ if __name__ == '__main__':
     mu, s2 = gp.predict(z[:, None])
 
     # get the "posterior" predictions.
-    mu_, s2_ = pybo.policies.opes.Predictor(gp, fmax).predict(z[:, None])
+    mu_, s2_, dm1, dm2 = pybo.policies.opes.Predictor(gp, fmax).predict(z[:, None])
 
-    fig = mp.figure(None, 1, 2, figsize=(10, 3))
-    fig[0].scatter(X.ravel(), Y)
-    fig[0].plot_banded(z, mu, 2*np.sqrt(s2))
-    fig[0].title = 'Unconstrained'
-    fig[1].scatter(X.ravel(), Y)
-    fig[1].plot_banded(z, mu_, 2*np.sqrt(s2_))
-    fig[1].hline(fmax)
-    fig[1].title = 'Constrained'
+    fig = mp.figure(2, 2, figsize=(10, 6))
+
+    fig[0, 0].scatter(X.ravel(), Y)
+    fig[0, 0].plot(z, mu, 2*np.sqrt(s2))
+    fig[0, 0].title = 'Unconstrained'
+
+    fig[0, 1].scatter(X.ravel(), Y)
+    fig[0, 1].plot(z, mu_, 2*np.sqrt(s2_))
+    fig[0, 1].hline(fmax)
+    fig[0, 1].title = 'Constrained'
+
+    fig[1, 1].plot(z, dm1)
+    fig[1, 1].plot(z, dm2)
+
     fig.draw()
