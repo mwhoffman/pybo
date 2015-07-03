@@ -45,6 +45,7 @@ if __name__ == '__main__':
     # create a new figure
     fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex='col', sharey='row')
     fig.show()
+    axs[1,1].axis('off')
     fbest = list()
 
     while True:
@@ -57,16 +58,13 @@ if __name__ == '__main__':
 
         # evaluate the posterior and the acquisition function
         mu, s2 = model.predict(x[:, None])
+        s = np.sqrt(s2)
         alpha = index(x[:, None])
 
         # plot the posterior and data
         axs[0,0].clear()
         axs[0,0].plot(x, mu, label='posterior')
-        axs[0,0].fill_between(x,
-                               mu - np.sqrt(s2),
-                               mu + np.sqrt(s2),
-                               alpha=0.1,
-                               label='uncertainty')
+        axs[0,0].fill_between(x, mu - 2 * s, mu + 2 * s, alpha=0.1)
         axs[0,0].plot(x, f.get_f(x[:, None]), label='true function')
         axs[0,0].vlines(xbest, *axs[0, 0].get_ylim(), label='recommendation')
         axs[0,0].scatter(model.data[0].ravel(), model.data[1], label='data')
@@ -82,8 +80,6 @@ if __name__ == '__main__':
         fbest += [f.get_f(xbest)]
         axs[0,1].plot(fbest)
         axs[0,1].set_ylim([-7, 2])
-
-        axs[1,1].axis('off')
 
         # draw
         [ax.legend(loc=0) for ax in axs.flatten()]
