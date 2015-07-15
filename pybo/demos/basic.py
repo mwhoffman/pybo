@@ -17,7 +17,7 @@ mpl.rc('savefig', bbox='tight')
 
 if __name__ == '__main__':
     # define noisy test function and search bounds
-    sn2 = 0.1 ** 2                  # Gaussian noise variance
+    sn2 = 0.2 ** 2                  # Gaussian noise variance
     f = benchfunk.Gramacy(sn2)
     bounds = f.bounds
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     model.add_data(X, Y)
 
     # set priors on the hyperparameters
-    model.params['like.sn2'].set_prior('uniform', 0.005, 0.015)
+    model.params['like.sn2'].set_prior('uniform', 0.001, 0.1)
     model.params['kern.rho'].set_prior('lognormal', 0, 100)
     model.params['kern.ell'].set_prior('lognormal', 0, 10)
     model.params['mean.bias'].set_prior('normal', 0, 20)

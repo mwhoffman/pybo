@@ -14,14 +14,16 @@ import reggie
 from pybo import utils
 
 # path to torch demos
-script = os.path.join(os.environ['HOME'],
-                      'torch-demos',
-                      'train-a-digit-classifier',
-                      'train-on-mnist.lua')
+path = os.path.join(os.environ['HOME'],
+                    'torch-demos',
+                    'train-a-digit-classifier')
+script = os.path.join(path, 'train-on-mnist.lua')
 
 # define command
 command = ' '.join([
-    'th {}'.format(script),
+    'th',
+    script,
+    '--verbose',
     '--model=mlp',               # remove to use default convnet
     '--batchSize=100',
     '--epochs=1',
@@ -30,16 +32,24 @@ command = ' '.join([
     '--coefL1={}',
     '--coefL2={}',
 ])
+# add torch demo repo to path
+command = 'cd {}; {}; cd {};'.format(
+    path,
+    command,
+    os.path.abspath(os.path.curdir)
+)
 
 # generate a black-box function from the shell command
-mlp_mnist = utils.Subprocess(command)
+mnist = utils.Subprocess(command)
 
 # define bounds for each input
-mlp_mnist.bounds = np.array([[0., 10.],
-                             [0., 10.],
-                             [0., 10.],
-                             [0., 10.]], ndmin=2)
+mnist.bounds = np.array([[0., 1.],
+                         [0., 1.],
+                         [0., 1.],
+                         [0., 1.]], ndmin=2)
 
 # optimize
-model = reggie.make_gp(2., 10., 0.1, 0.)
-info, model = pybo.solve_bayesopt(mlp_mnist, mlp_mnist.bounds, model, niter=15)
+model = reggie.make_gp(1., 10., 0.1, 0., ndim=len(mnist.bounds))
+info, model = pybo.solve_bayesopt(mnist, mnist.bounds, model, niter=20)
+
+print info
