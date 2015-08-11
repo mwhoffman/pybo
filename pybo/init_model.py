@@ -7,15 +7,16 @@ import reggie as rg
 __all__ = ['init_model']
 
 
-def init_model(f, bounds, design='latin', ninit=None, rng=None):
+def init_model(f, bounds, ninit=None, design='latin', rng=None):
     """Initialize model and its hyperpriors using initial data.
 
     Arguments:
         f: function handle
         bounds: list of doubles (xmin, xmax) for each dimension.
-        mean: str name of the mean class.
-        mean_args: dict of arguments to be passed to the mean constructor.
-        seed: int representing the random seed for reproducibility.
+        ninit: int, number of design points to initialize model with.
+        design: string, corresponding to a function in `inits.py`, with
+            'init_' stripped.
+        rng: int or random state.
 
     Returns:
         Initialized model.
@@ -40,8 +41,8 @@ def init_model(f, bounds, design='latin', ninit=None, rng=None):
     model = rg.make_gp(sn2, rho, ell, bias, inference='exact')
 
     # define priors
-    model.params['like.sn2'].set_prior('lognormal', mu=-2, s2=1)
-    model.params['kern.rho'].set_prior('lognormal', mu=np.log(rho), s2=1.)
+    model.params['like.sn2'].set_prior('lognormal', -2, 1)
+    model.params['kern.rho'].set_prior('lognormal', np.log(rho), 1.)
     model.params['kern.ell'].set_prior('uniform', ell / 100, ell * 10)
     model.params['mean.bias'].set_prior('normal', bias, rho)
 
