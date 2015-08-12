@@ -48,7 +48,7 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
 
 
     # initialize the MCMC inference meta-model and add data
-    model = rg.MCMC(model, n=10, burn=100, rng=rng)
     model.add_data(xinit, yinit)
+    model = rg.MCMC(model, n=10, burn=100, rng=rng)
 
     return model
