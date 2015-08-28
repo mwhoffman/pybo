@@ -12,7 +12,6 @@ import numpy as np
 import inspect
 import functools
 import warnings
-import mwhutils.random as random
 
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
@@ -21,6 +20,8 @@ from . import inits
 from . import solvers
 from . import policies
 from . import recommenders
+
+from .utils import rstate
 
 # exported symbols
 __all__ = ['solve_bayesopt']
@@ -140,7 +141,7 @@ def solve_bayesopt(objective,
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
     # initialize the random number generator.
-    rng = random.rstate(rng)
+    rng = rstate(rng)
 
     # get the model components.
     init, policy, solver, recommender = \
@@ -167,7 +168,6 @@ def solve_bayesopt(objective,
             X = X[:niter]
 
         Y = [objective(x) for x in X]
-
 
         for i, (x, y) in enumerate(zip(X, Y)):
             model.add_data(x, y)
