@@ -8,7 +8,8 @@ from __future__ import print_function
 
 import numpy as np
 import scipy.optimize
-import mwhutils.grid as grid
+
+from ..inits import init_uniform
 
 __all__ = ['solve_lbfgs']
 
@@ -41,7 +42,7 @@ def solve_lbfgs(f,
     if xgrid is None:
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
-        xgrid = grid.uniform(bounds, ngrid, rng)
+        xgrid = init_uniform(bounds, ngrid, rng)
 
     # compute func_grad on points xgrid
     finit = f(xgrid, grad=False)

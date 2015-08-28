@@ -1,5 +1,4 @@
 numpy
 scipy
-matplotlib
 git+https://github.com/mwhoffman/mwhutils.git#egg=mwhutils
-git+https://github.com/mwhoffman/pygp.git#egg=pygp
+git+https://github.com/mwhoffman/reggie.git#egg=reggie
