@@ -17,10 +17,10 @@ import mwhutils.random as random
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
-from . import inits
 from . import solvers
 from . import policies
 from . import recommenders
+from .init_model import init_model
 
 # exported symbols
 __all__ = ['solve_bayesopt']
@@ -28,7 +28,7 @@ __all__ = ['solve_bayesopt']
 
 ### SOLVER COMPONENTS #########################################################
 
-def get_components(init, policy, solver, recommender, rng):
+def get_components(policy, solver, recommender, rng):
     """
     Return model components for Bayesian optimization of the correct form given
     string identifiers.
@@ -86,8 +86,7 @@ def get_components(init, policy, solver, recommender, rng):
 
         return func
 
-    return (get_func('init', init, inits, lstrip='init_'),
-            get_func('policy', policy, policies, lstrip=''),
+    return (get_func('policy', policy, policies, lstrip=''),
             get_func('solver', solver, solvers, lstrip='solve_'),
             get_func('recommender', recommender, recommenders, lstrip='best_'))
 
@@ -96,9 +95,8 @@ def get_components(init, policy, solver, recommender, rng):
 
 def solve_bayesopt(objective,
                    bounds,
-                   model,
+                   model=None,
                    niter=100,
-                   init='latin',
                    policy='ei',
                    solver='lbfgs',
                    recommender='latent',
@@ -133,53 +131,29 @@ def solve_bayesopt(objective,
         query locations, outputs, and recommendations at each iteration. If
         ground-truth is known an additional field `fbest` will be included.
     """
-    # make a copy of model
-    model = model.copy()
+    rng = random.rstate(rng)                            # fix random number gen
+    bounds = np.array(bounds, dtype=float, ndmin=2)     # make bounds a 2d-array
 
-    # make sure the bounds are a 2d-array.
-    bounds = np.array(bounds, dtype=float, ndmin=2)
+    # get modular components.
+    policy, solver, recommender = \
+        get_components(policy, solver, recommender, rng)
 
-    # initialize the random number generator.
-    rng = random.rstate(rng)
-
-    # get the model components.
-    init, policy, solver, recommender = \
-        get_components(init, policy, solver, recommender, rng)
+    # initialize model
+    if model is None:
+        ninit = min(3*len(bounds), niter)
+        model = init_model(objective, bounds, ninit, design='latin', rng=rng)
+    else:
+        ninit = 0
+        model = model.copy()                            # to avoid overwriting
 
     # allocate a datastructure containing "convergence" info.
-    info = np.zeros(niter,
+    info = np.zeros(niter - ninit,
                     [('x', np.float, (len(bounds),)),
                      ('y', np.float),
                      ('xbest', np.float, (len(bounds),))])
-    ninit = 0
-
-    # initialize model
-    if model.ndata == 0:
-        # create a list of initial points to query.
-        X = init(bounds)
-
-        if len(X) > niter:
-            # warn if initialization goes over budget
-            msg = 'initialization samples exceeded evaluation budget `niter`'
-            warnings.warn(msg, stacklevel=2)
-
-            # truncate initial samples to budget
-            X = X[:niter]
-
-        Y = [objective(x) for x in X]
-
-
-        for i, (x, y) in enumerate(zip(X, Y)):
-            model.add_data(x, y)
-
-            # record everything.
-            info[i] = (x, y, recommender(model, bounds))
-
-        # deduct initial points from requested number of iterations
-        ninit = model.ndata
 
     # Bayesian optimization loop
-    for i in xrange(ninit, niter):
+    for i in xrange(niter-ninit):
         # get the next point to evaluate.
         index = policy(model, bounds)
         x, _ = solver(index, bounds)
