@@ -11,8 +11,6 @@ from __future__ import print_function
 import numpy as np
 import inspect
 import functools
-import warnings
-import mwhutils.random as random
 
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
@@ -20,13 +18,15 @@ import mwhutils.random as random
 from . import solvers
 from . import policies
 from . import recommenders
+
 from .init_model import init_model
+from .utils import rstate
 
 # exported symbols
 __all__ = ['solve_bayesopt']
 
 
-### SOLVER COMPONENTS #########################################################
+# SOLVER COMPONENTS ###########################################################
 
 def get_components(policy, solver, recommender, rng):
     """
@@ -91,7 +91,7 @@ def get_components(policy, solver, recommender, rng):
             get_func('recommender', recommender, recommenders, lstrip='best_'))
 
 
-### THE BAYESOPT META SOLVER ##################################################
+# THE BAYESOPT META SOLVER ####################################################
 
 def solve_bayesopt(objective,
                    bounds,
@@ -131,8 +131,8 @@ def solve_bayesopt(objective,
         query locations, outputs, and recommendations at each iteration. If
         ground-truth is known an additional field `fbest` will be included.
     """
-    rng = random.rstate(rng)                            # fix random number gen
-    bounds = np.array(bounds, dtype=float, ndmin=2)     # make bounds a 2d-array
+    rng = rstate(rng)                                  # fix random number gen
+    bounds = np.array(bounds, dtype=float, ndmin=2)    # make bounds a 2d-array
 
     # get modular components.
     policy, solver, recommender = \
@@ -144,7 +144,7 @@ def solve_bayesopt(objective,
         model = init_model(objective, bounds, ninit, design='latin', rng=rng)
     else:
         ninit = 0
-        model = model.copy()                            # to avoid overwriting
+        model = model.copy()                           # to avoid overwriting
 
     # allocate a datastructure containing "convergence" info.
     info = np.zeros(niter - ninit,
