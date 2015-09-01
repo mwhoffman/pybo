@@ -4,7 +4,6 @@ Objects which global optimization solvers.
 
 # pylint: disable=wildcard-import
 from .bayesopt import *
-from .init_model import *
 
 from . import bayesopt
 

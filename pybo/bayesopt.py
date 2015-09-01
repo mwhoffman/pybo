@@ -12,83 +12,125 @@ import numpy as np
 import inspect
 import functools
 
+import reggie
+
 # each method/class defined exported by these modules will be exposed as a
 # string to the solve_bayesopt method so that we can swap in/out different
 # components for the "meta" solver.
+from . import inits
 from . import solvers
 from . import policies
 from . import recommenders
 
-from .init_model import init_model
 from .utils import rstate
 
 # exported symbols
-__all__ = ['solve_bayesopt']
+__all__ = ['solve_bayesopt', 'init_model']
 
 
-# SOLVER COMPONENTS ###########################################################
+# MODEL INITIALIZATION ########################################################
 
-def get_components(policy, solver, recommender, rng):
+def init_model(f, bounds, ninit=None, design='latin', rng=None):
     """
-    Return model components for Bayesian optimization of the correct form given
-    string identifiers.
+    Initialize model and its hyperpriors using initial data.
+
+    Arguments:
+        f: function handle
+        bounds: list of doubles (xmin, xmax) for each dimension.
+        ninit: int, number of design points to initialize model with.
+        design: string, corresponding to a function in `pybo.inits`, with
+            'init_' stripped.
+        rng: int or random state.
+
+    Returns:
+        Initialized model.
     """
-    def get_func(key, value, module, lstrip):
-        """
-        Construct the model component if the given value is either a function
-        or a string identifying a function in the given module (after stripping
-        extraneous text). The value can also be passed as a 2-tuple where the
-        second element includes kwargs. Partially apply any kwargs and the rng
-        before returning the function.
-        """
-        if isinstance(value, (list, tuple)):
-            try:
-                value, kwargs = value
-                kwargs = dict(kwargs)
-            except (ValueError, TypeError):
-                raise ValueError('invalid arguments for component %r' % key)
+    rng = rstate(rng)
+    xmin, xmax = bounds.T
+    ninit = 3 * len(xmin) if ninit is None else ninit
+
+    # get initial design
+    init_design = getattr(inits, 'init_' + design)
+    xinit = init_design(bounds, ninit, rng)
+    yinit = np.fromiter((f(xi) for xi in xinit), dtype=np.float)
+
+    # define initial setting of hyper parameters
+    sn2 = 1e-6
+    rho = yinit.max() - yinit.min() if (len(yinit) > 1) else 1.
+    rho = 1. if (rho < 1e-1) else rho
+    ell = 0.25 * (xmax - xmin)
+    bias = np.mean(yinit) if (len(yinit) > 0) else 0.
+
+    # initialize the base model
+    model = reggie.make_gp(sn2, rho, ell, bias)
+
+    # define priors
+    model.params['like.sn2'].set_prior('lognormal', -2, 1)
+    model.params['kern.rho'].set_prior('lognormal', np.log(rho), 1.)
+    model.params['kern.ell'].set_prior('uniform', ell / 100, ell * 10)
+    model.params['mean.bias'].set_prior('normal', bias, rho)
+
+    # initialize the MCMC inference meta-model and add data
+    model.add_data(xinit, yinit)
+    model = reggie.MCMC(model, n=10, burn=100, rng=rng)
+
+    return model
+
+
+# HELPER FOR CONSTRUCTING COMPONENTS ##########################################
+
+def get_component(value, module, rng, lstrip=''):
+    """
+    Construct the model component if the given value is either a function
+    or a string identifying a function in the given module (after stripping
+    extraneous text). The value can also be passed as a 2-tuple where the
+    second element includes kwargs. Partially apply any kwargs and the rng
+    before returning the function.
+    """
+    if isinstance(value, (list, tuple)):
+        try:
+            value, kwargs = value
+            kwargs = dict(kwargs)
+        except (ValueError, TypeError):
+            raise ValueError('invalid component: {:r}'.format(value))
+    else:
+        kwargs = {}
+
+    if hasattr(value, '__call__'):
+        func = value
+    else:
+        for fname in module.__all__:
+            func = getattr(module, fname)
+            if fname.startswith(lstrip):
+                fname = fname[len(lstrip):]
+            fname = fname.lower()
+            if fname == value:
+                break
         else:
-            kwargs = {}
+            raise ValueError('invalid component: {:s}'.format(value))
 
-        if hasattr(value, '__call__'):
-            func = value
-        else:
-            for fname in module.__all__:
-                func = getattr(module, fname)
-                if fname.startswith(lstrip):
-                    fname = fname[len(lstrip):]
-                fname = fname.lower()
-                if fname == value:
-                    break
-            else:
-                raise ValueError('invalid identifier for component %r' % key)
+    # get the argspec
+    argspec = inspect.getargspec(func)
 
-        # get the argspec
-        argspec = inspect.getargspec(func)
+    # from the argspec determine the valid kwargs; these should correspond
+    # to any kwargs of the function except for rng.
+    if argspec.defaults is not None:
+        valid = set(argspec.args[-len(argspec.defaults):])
+        valid.discard('rng')
+    else:
+        valid = set()
 
-        # from the argspec determine the valid kwargs; these should correspond
-        # to any kwargs of the function except for rng.
-        if argspec.defaults is not None:
-            valid = set(argspec.args[-len(argspec.defaults):])
-            valid.discard('rng')
-        else:
-            valid = set()
+    if not valid.issuperset(kwargs.keys()):
+        raise ValueError("unknown arguments for {:s}: {:s}"
+                         .format(func.__name__, ', '.join(kwargs.keys())))
 
-        if not valid.issuperset(kwargs.keys()):
-            raise ValueError("unknown keyword arguments for component '{:s}'"
-                             .format(key))
+    if 'rng' in argspec.args:
+        kwargs['rng'] = rng
 
-        if 'rng' in argspec.args:
-            kwargs['rng'] = rng
+    if len(kwargs) > 0:
+        func = functools.partial(func, **kwargs)
 
-        if len(kwargs) > 0:
-            func = functools.partial(func, **kwargs)
-
-        return func
-
-    return (get_func('policy', policy, policies, lstrip=''),
-            get_func('solver', solver, solvers, lstrip='solve_'),
-            get_func('recommender', recommender, recommenders, lstrip='best_'))
+    return func
 
 
 # THE BAYESOPT META SOLVER ####################################################
@@ -135,8 +177,9 @@ def solve_bayesopt(objective,
     bounds = np.array(bounds, dtype=float, ndmin=2)    # make bounds a 2d-array
 
     # get modular components.
-    policy, solver, recommender = \
-        get_components(policy, solver, recommender, rng)
+    policy = get_component(policy, policies, rng)
+    solver = get_component(solver, solvers, rng, lstrip='solve_')
+    recommender = get_component(recommender, recommenders, rng, lstrip='best_')
 
     # initialize model
     if model is None:
