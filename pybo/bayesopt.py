@@ -46,8 +46,9 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
         Initialized model.
     """
     rng = rstate(rng)
-    xmin, xmax = bounds.T
-    ninit = 3 * len(xmin) if ninit is None else ninit
+    bounds = np.array(bounds, dtype=float, ndmin=2)
+    ndim = len(bounds)
+    ninit = ninit if (ninit is not None) else 3*ndim
 
     # get initial design
     init_design = getattr(inits, 'init_' + design)
@@ -58,7 +59,7 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
     sn2 = 1e-6
     rho = yinit.max() - yinit.min() if (len(yinit) > 1) else 1.
     rho = 1. if (rho < 1e-1) else rho
-    ell = 0.25 * (xmax - xmin)
+    ell = 0.25 * (bounds[:, 1] - bounds[:, 0])
     bias = np.mean(yinit) if (len(yinit) > 0) else 0.
 
     # initialize the base model
@@ -133,6 +134,18 @@ def get_component(value, module, rng, lstrip=''):
     return func
 
 
+# FORMATTING HELPERS FOR VERBOSITY IN SOLVE_BAYESOPT ##########################
+
+# simple format functions
+int2str = '{:03d}'.format
+float2str = '{: .3f}'.format
+
+
+def array2str(a):
+    """Formatting helper for arrays."""
+    return np.array2string(a, formatter=dict(float=float2str, int=int2str))
+
+
 # THE BAYESOPT META SOLVER ####################################################
 
 def solve_bayesopt(objective,
@@ -142,6 +155,8 @@ def solve_bayesopt(objective,
                    policy='ei',
                    solver='lbfgs',
                    recommender='latent',
+                   ninit=None,
+                   verbose=False,
                    rng=None):
     """
     Maximize the given function using Bayesian Optimization.
@@ -173,8 +188,9 @@ def solve_bayesopt(objective,
         query locations, outputs, and recommendations at each iteration. If
         ground-truth is known an additional field `fbest` will be included.
     """
-    rng = rstate(rng)                                  # fix random number gen
-    bounds = np.array(bounds, dtype=float, ndmin=2)    # make bounds a 2d-array
+    rng = rstate(rng)
+    bounds = np.array(bounds, dtype=float, ndmin=2)
+    ndim = len(bounds)
 
     # get modular components.
     policy = get_component(policy, policies, rng)
@@ -183,20 +199,19 @@ def solve_bayesopt(objective,
 
     # initialize model
     if model is None:
-        ninit = min(3*len(bounds), niter)
         model = init_model(objective, bounds, ninit, design='latin', rng=rng)
     else:
-        ninit = 0
-        model = model.copy()                           # to avoid overwriting
+        # copy the model in order to avoid overwriting
+        model = model.copy()
 
-    # allocate a datastructure containing "convergence" info.
-    info = np.zeros(niter - ninit,
-                    [('x', np.float, (len(bounds),)),
+    # allocate a datastructure containing algorithm progress
+    info = np.zeros(niter,
+                    [('x', np.float, (ndim,)),
                      ('y', np.float),
-                     ('xbest', np.float, (len(bounds),))])
+                     ('xbest', np.float, (ndim,))])
 
     # Bayesian optimization loop
-    for i in xrange(niter-ninit):
+    for i in xrange(niter):
         # get the next point to evaluate.
         index = policy(model, bounds)
         x, _ = solver(index, bounds)
@@ -204,8 +219,17 @@ def solve_bayesopt(objective,
         # make an observation and record it.
         y = objective(x)
         model.add_data(x, y)
+        xbest = recommender(model, bounds)
 
-        # record everything.
-        info[i] = (x, y, recommender(model, bounds))
+        # record the input, output, and recommendation
+        info[i] = (x, y, xbest)
+
+        # print out the progress if requested.
+        if verbose:
+            print('i={:s}, x={:s}, y={:s}, xbest={:s}'
+                  .format(int2str(i),
+                          array2str(x),
+                          float2str(y),
+                          array2str(xbest)))
 
     return info, model
