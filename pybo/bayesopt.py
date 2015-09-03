@@ -53,7 +53,11 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
     # get initial design
     init_design = getattr(inits, 'init_' + design)
     xinit = init_design(bounds, ninit, rng)
-    yinit = np.fromiter((f(xi) for xi in xinit), dtype=np.float)
+    yinit = np.full(ninit, np.nan)
+
+    # sample the initial data
+    for i, x in enumerate(xinit):
+        yinit[i] = f(x)
 
     # define initial setting of hyper parameters
     sn2 = 1e-6
