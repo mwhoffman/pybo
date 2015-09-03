@@ -7,17 +7,17 @@ needs a new observation.
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+from benchfunk.functions import Interactive
 import pybo
 import reggie
-from pybo import utils
 
 # initialize prompter and 1d bounds
-prompter = utils.Interactive()
+prompter = Interactive()
 bounds = np.array([0., 1.], ndmin=2)
 
 # define model and optimize
 model = reggie.make_gp(.1, 10., 0.1, 0.)
-model = reggie.MCMC(model, n=10)
 info, model = pybo.solve_bayesopt(prompter, bounds, model, niter=10)
 
 # visualize

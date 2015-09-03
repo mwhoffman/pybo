@@ -9,9 +9,9 @@ import numpy as np
 import os
 import os.path
 
+from benchfunk.functions import Subprocess
 import pybo
 import reggie
-from pybo import utils
 
 # path to torch demos
 path = os.path.join(os.environ['HOME'],
@@ -40,7 +40,7 @@ command = 'cd {}; {}; cd {};'.format(
 )
 
 # generate a black-box function from the shell command
-mnist = utils.Subprocess(command)
+mnist = Subprocess(command)
 
 # define bounds for each input
 mnist.bounds = np.array([[0., 1.],
