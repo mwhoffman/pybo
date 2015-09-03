@@ -43,13 +43,13 @@ command = 'cd {}; {}; cd {};'.format(
 mnist = Subprocess(command)
 
 # define bounds for each input
-mnist.bounds = np.array([[0., 1.],
-                         [0., 1.],
-                         [0., 1.],
-                         [0., 1.]], ndmin=2)
+bounds = np.array([[0., 1.],
+                   [0., 1.],
+                   [0., 1.],
+                   [0., 1.]], ndmin=2)
 
 # optimize
-model = reggie.make_gp(1., 10., 0.1, 0., ndim=len(mnist.bounds))
-info, model = pybo.solve_bayesopt(mnist, mnist.bounds, model, niter=20)
+model = reggie.make_gp(1., 10., 0.1, 0., ndim=len(bounds))
+info, model = pybo.solve_bayesopt(mnist, bounds, model, niter=20)
 
 print info
