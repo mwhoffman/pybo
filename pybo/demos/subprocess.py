@@ -50,6 +50,6 @@ bounds = np.array([[0., 1.],
 
 # optimize
 model = reggie.make_gp(1., 10., 0.1, 0., ndim=len(bounds))
-info, model = pybo.solve_bayesopt(mnist, bounds, model, niter=20)
+xbest, model = pybo.solve_bayesopt(mnist, bounds, model, niter=20)
 
-print info
+print xbest

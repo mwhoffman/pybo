@@ -18,7 +18,7 @@ bounds = np.array([0., 1.], ndmin=2)
 
 # define model and optimize
 model = reggie.make_gp(.1, 10., 0.1, 0.)
-info, model = pybo.solve_bayesopt(prompter, bounds, model, niter=10)
+xbest, model = pybo.solve_bayesopt(prompter, bounds, model, niter=10)
 
 # visualize
 xx = np.linspace(0, 1, 100)

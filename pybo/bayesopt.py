@@ -209,10 +209,7 @@ def solve_bayesopt(objective,
         model = model.copy()
 
     # allocate a datastructure containing algorithm progress
-    info = np.zeros(niter,
-                    [('x', np.float, (ndim,)),
-                     ('y', np.float),
-                     ('xbest', np.float, (ndim,))])
+    xbest = list()
 
     # Bayesian optimization loop
     for i in xrange(niter):
@@ -223,10 +220,7 @@ def solve_bayesopt(objective,
         # make an observation and record it.
         y = objective(x)
         model.add_data(x, y)
-        xbest = recommender(model, bounds)
-
-        # record the input, output, and recommendation
-        info[i] = (x, y, xbest)
+        xbest += [recommender(model, bounds)]
 
         # print out the progress if requested.
         if verbose:
@@ -236,4 +230,6 @@ def solve_bayesopt(objective,
                           float2str(y),
                           array2str(xbest)))
 
-    return info, model
+    xbest = np.array(xbest, ndmin=2)
+
+    return xbest, model
