@@ -1,7 +1,9 @@
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
-import benchfunk
-import reggie
-import mwhutils.plotting as mp
+
+from reggie import make_gp, MCMC
+from benchfunk.functions import Gramacy
 
 from pybo import inits
 from pybo import policies
@@ -9,9 +11,14 @@ from pybo import solvers
 from pybo import recommenders
 
 
+# makes plots prettier. should eventually be moved out of here.
+mpl.rc('lines', lw=2)
+mpl.rc('legend', scatterpoints=1)
+mpl.rc('savefig', bbox='tight')
+
 if __name__ == '__main__':
     # grab a test function and points at which to plot things
-    f = benchfunk.Gramacy(0.01)
+    f = Gramacy(0.01)
     bounds = f.bounds
 
     # get initial data and some test points.
@@ -20,7 +27,7 @@ if __name__ == '__main__':
     x = np.linspace(bounds[0][0], bounds[0][1], 500)
 
     # initialize the model
-    model = reggie.make_gp(0.01, 1.9, 0.1, 0)
+    model = make_gp(0.01, 1.9, 0.1, 0)
     model.add_data(X, Y)
 
     # set a prior on the parameters
@@ -30,13 +37,16 @@ if __name__ == '__main__':
     model.params['mean.bias'].set_prior('normal', 0, 20)
 
     # make a model which samples parameters
-    model = reggie.MCMC(model, n=20, rng=None)
+    model = MCMC(model, n=20, rng=None)
 
     # create a new figure
-    fig = mp.figure(rows=2, figsize=(6, 8))
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex='col')
+    fig.show()
+    axs[1, 1].axis('off')
+    fbest = list()
 
     while True:
-        # get the index so we can both solve it and plot it
+        # get index to solve it and plot it
         index = policies.EI(model, bounds, 0.1)
 
         # get the recommendation and the next query
@@ -45,26 +55,32 @@ if __name__ == '__main__':
 
         # evaluate the posterior and the acquisition function
         mu, s2 = model.predict(x[:, None])
+        s = np.sqrt(s2)
         alpha = index(x[:, None])
 
-        # clear the figure
-        fig.clear()
-        fig.hold()
-
-        # plot the posterior
-        fig[0].plot(x, mu, 2*np.sqrt(s2), label='posterior')
-        fig[0].plot(x, f.get_f(x[:, None]), label='true function')
-        fig[0].scatter(model.data[0].ravel(), model.data[1], label='data')
-        fig[0].vline(xbest, label='recommendation')
-        fig[0].set_lim(ymin=-7, ymax=2)
+        # plot the posterior and data
+        axs[0, 0].clear()
+        axs[0, 0].plot(x, mu, label='posterior')
+        axs[0, 0].fill_between(x, mu - 2 * s, mu + 2 * s, alpha=0.1)
+        axs[0, 0].plot(x, f.get_f(x[:, None]), label='true function')
+        axs[0, 0].vlines(xbest, *axs[0, 0].get_ylim(), label='recommendation')
+        axs[0, 0].scatter(model.data[0].ravel(), model.data[1], label='data')
 
         # plot the acquisition function
-        fig[1].plot(x, alpha, 0, add=False, label='acquisition')
-        fig[1].vline(xnext, label='next query')
-        fig[1].remove_ticks(yticks=True)
+        axs[1, 0].clear()
+        axs[1, 0].plot(x, alpha, label='acquisition')
+        axs[1, 0].vlines(xnext, *axs[1, 0].get_ylim(), label='next query')
+        axs[1, 0].set_xlim(*bounds)
+
+        # plot the latent function at recomended points
+        axs[0, 1].clear()
+        fbest += [f.get_f(xbest)]
+        axs[0, 1].plot(fbest)
 
         # draw
-        fig.draw()
+        for ax in axs.flatten():
+            ax.legend(loc=0)
+        fig.canvas.draw()
 
         # add the next evaluation
         model.add_data(xnext, f(xnext))

@@ -194,7 +194,6 @@ def solve_bayesopt(objective,
     """
     rng = rstate(rng)
     bounds = np.array(bounds, dtype=float, ndmin=2)
-    ndim = len(bounds)
 
     # get modular components.
     policy = get_component(policy, policies, rng)
@@ -209,24 +208,24 @@ def solve_bayesopt(objective,
         model = model.copy()
 
     # allocate a datastructure containing algorithm progress
-    info = np.zeros(niter,
-                    [('x', np.float, (ndim,)),
-                     ('y', np.float),
-                     ('xbest', np.float, (ndim,))])
+    xbest = list()
 
     # Bayesian optimization loop
     for i in xrange(niter):
-        # get the next point to evaluate.
-        index = policy(model, bounds)
-        x, _ = solver(index, bounds)
+        if model.ndata == 0:
+            # if the model has no data that means that we were given a model,
+            # but that model had no initial data selected. So just fall back on
+            # a very simple initialization scheme.
+            x = inits.init_middle(bounds)[0]
+        else:
+            # get the next point to evaluate.
+            index = policy(model, bounds)
+            x, _ = solver(index, bounds)
 
         # make an observation and record it.
         y = objective(x)
         model.add_data(x, y)
-        xbest = recommender(model, bounds)
-
-        # record the input, output, and recommendation
-        info[i] = (x, y, xbest)
+        xbest += [recommender(model, bounds)]
 
         # print out the progress if requested.
         if verbose:
@@ -234,6 +233,8 @@ def solve_bayesopt(objective,
                   .format(int2str(i),
                           array2str(x),
                           float2str(y),
-                          array2str(xbest)))
+                          array2str(xbest[-1])))
 
-    return info, model
+    xbest = np.array(xbest, ndmin=2)
+
+    return xbest, model

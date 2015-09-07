@@ -1,4 +1,3 @@
 numpy
 scipy
-git+https://github.com/mwhoffman/mwhutils.git#egg=mwhutils
 git+https://github.com/mwhoffman/reggie.git#egg=reggie
