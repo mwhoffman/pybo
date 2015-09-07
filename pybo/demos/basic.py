@@ -1,4 +1,8 @@
-import matplotlib as mpl
+"""
+Animated demo showing progress of Bayesian optimization on a simple
+(but highly multimodal) one-dimensional function.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -11,10 +15,16 @@ from pybo import solvers
 from pybo import recommenders
 
 
-# makes plots prettier. should eventually be moved out of here.
-mpl.rc('lines', lw=2)
-mpl.rc('legend', scatterpoints=1)
-mpl.rc('savefig', bbox='tight')
+# we shouldn't be doing this. but I'll leave it for now.
+plt.rcParams['lines.linewidth'] = 2.0
+plt.rcParams['legend.scatterpoints'] = 3
+plt.rcParams['toolbar'] = 'None'
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.grid'] = True
+plt.rcParams['grid.color'] = 'k'
+plt.rcParams['grid.linestyle'] = '-'
+plt.rcParams['grid.alpha'] = 0.2
+plt.rcParams['grid.linewidth'] = 0.5
 
 if __name__ == '__main__':
     # grab a test function and points at which to plot things
@@ -38,12 +48,11 @@ if __name__ == '__main__':
 
     # make a model which samples parameters
     model = MCMC(model, n=20, rng=None)
+    fbest = list()
 
     # create a new figure
-    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex='col')
-    fig.show()
-    axs[1, 1].axis('off')
-    fbest = list()
+    fig = plt.figure()
+    fig.set_tight_layout(True)
 
     while True:
         # get index to solve it and plot it
@@ -57,28 +66,40 @@ if __name__ == '__main__':
         mu, s2 = model.predict(x[:, None])
         s = np.sqrt(s2)
         alpha = index(x[:, None])
+        fbest += [f.get_f(xbest)]
+
+        fig.clear()
+        ax1 = plt.subplot2grid((2, 2), (0, 0))
+        ax2 = plt.subplot2grid((2, 2), (1, 0), sharex=ax1)
+        ax3 = plt.subplot2grid((2, 2), (0, 1), rowspan=2)
+
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        plt.setp(ax2.get_yticklabels(), visible=False)
 
         # plot the posterior and data
-        axs[0, 0].clear()
-        axs[0, 0].plot(x, mu, label='posterior')
-        axs[0, 0].fill_between(x, mu - 2 * s, mu + 2 * s, alpha=0.1)
-        axs[0, 0].plot(x, f.get_f(x[:, None]), label='true function')
-        axs[0, 0].vlines(xbest, *axs[0, 0].get_ylim(), label='recommendation')
-        axs[0, 0].scatter(model.data[0].ravel(), model.data[1], label='data')
+        ax1.set_title('current model')
+        ax1.plot(x, mu, label='posterior')
+        ax1.fill_between(x, mu - 2 * s, mu + 2 * s, alpha=0.1)
+        ax1.plot(x, f.get_f(x[:, None]), label='true function')
+        ax1.axvline(xbest, c='r', ls='--', label='recommendation')
+        ax1.scatter(model.data[0].ravel(), model.data[1], label='data')
 
         # plot the acquisition function
-        axs[1, 0].clear()
-        axs[1, 0].plot(x, alpha, label='acquisition')
-        axs[1, 0].vlines(xnext, *axs[1, 0].get_ylim(), label='next query')
-        axs[1, 0].set_xlim(*bounds)
+        ax2.set_title('current policy')
+        ax2.plot(x, alpha, label='acquisition')
+        ax2.axvline(xnext, c='r', ls='--', label='next query')
+        ax2.set_xlim(*bounds)
 
         # plot the latent function at recomended points
-        axs[0, 1].clear()
-        fbest += [f.get_f(xbest)]
-        axs[0, 1].plot(fbest)
+        ax3.set_title('value of recommendation')
+        ax3.plot(fbest)
 
         # draw
-        for ax in axs.flatten():
+        for ax in fig.axes:
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.xaxis.set_tick_params(direction='out', top=False)
+            ax.yaxis.set_tick_params(direction='out', right=False)
             ax.legend(loc=0)
         fig.canvas.draw()
 
