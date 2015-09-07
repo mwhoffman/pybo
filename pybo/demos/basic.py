@@ -2,8 +2,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-import benchfunk
-import reggie
+from reggie import make_gp, MCMC
+from benchfunk.functions import Gramacy
+
 from pybo import inits
 from pybo import policies
 from pybo import solvers
@@ -16,9 +17,8 @@ mpl.rc('legend', scatterpoints=1)
 mpl.rc('savefig', bbox='tight')
 
 if __name__ == '__main__':
-    # define noisy test function and search bounds
-    sn2 = 0.2 ** 2                  # Gaussian noise variance
-    f = benchfunk.Gramacy(sn2)
+    # grab a test function and points at which to plot things
+    f = Gramacy(0.01)
     bounds = f.bounds
 
     # get initial data and some test points.
@@ -27,25 +27,22 @@ if __name__ == '__main__':
     x = np.linspace(bounds[0][0], bounds[0][1], 500)
 
     # initialize the model
-    rho = 2.0                       # initial kernel amplitude
-    ell = 0.1                       # initial kernel length-scale
-    mu = 0.0                        # constant prior mean
-    model = reggie.make_gp(sn2, rho, ell, mu)
+    model = make_gp(0.01, 1.9, 0.1, 0)
     model.add_data(X, Y)
 
-    # set priors on the hyperparameters
-    model.params['like.sn2'].set_prior('uniform', 0.001, 0.1)
+    # set a prior on the parameters
+    model.params['like.sn2'].set_prior('uniform', 0.005, 0.015)
     model.params['kern.rho'].set_prior('lognormal', 0, 100)
     model.params['kern.ell'].set_prior('lognormal', 0, 10)
     model.params['mean.bias'].set_prior('normal', 0, 20)
 
-    # initialize a model with MCMC hyperparameter sampling
-    model = reggie.MCMC(model, n=10)
+    # make a model which samples parameters
+    model = MCMC(model, n=20, rng=None)
 
     # create a new figure
-    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex='col', sharey='row')
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex='col')
     fig.show()
-    axs[1,1].axis('off')
+    axs[1, 1].axis('off')
     fbest = list()
 
     while True:
@@ -62,27 +59,27 @@ if __name__ == '__main__':
         alpha = index(x[:, None])
 
         # plot the posterior and data
-        axs[0,0].clear()
-        axs[0,0].plot(x, mu, label='posterior')
-        axs[0,0].fill_between(x, mu - 2 * s, mu + 2 * s, alpha=0.1)
-        axs[0,0].plot(x, f.get_f(x[:, None]), label='true function')
-        axs[0,0].vlines(xbest, *axs[0, 0].get_ylim(), label='recommendation')
-        axs[0,0].scatter(model.data[0].ravel(), model.data[1], label='data')
+        axs[0, 0].clear()
+        axs[0, 0].plot(x, mu, label='posterior')
+        axs[0, 0].fill_between(x, mu - 2 * s, mu + 2 * s, alpha=0.1)
+        axs[0, 0].plot(x, f.get_f(x[:, None]), label='true function')
+        axs[0, 0].vlines(xbest, *axs[0, 0].get_ylim(), label='recommendation')
+        axs[0, 0].scatter(model.data[0].ravel(), model.data[1], label='data')
 
         # plot the acquisition function
-        axs[1,0].clear()
-        axs[1,0].plot(x, alpha, label='acquisition')
-        axs[1,0].vlines(xnext, *axs[1, 0].get_ylim(), label='next query')
-        axs[1,0].set_xlim(*bounds)
+        axs[1, 0].clear()
+        axs[1, 0].plot(x, alpha, label='acquisition')
+        axs[1, 0].vlines(xnext, *axs[1, 0].get_ylim(), label='next query')
+        axs[1, 0].set_xlim(*bounds)
 
         # plot the latent function at recomended points
-        axs[0,1].clear()
+        axs[0, 1].clear()
         fbest += [f.get_f(xbest)]
-        axs[0,1].plot(fbest)
-        axs[0,1].set_ylim([-7, 2])
+        axs[0, 1].plot(fbest)
 
         # draw
-        [ax.legend(loc=0) for ax in axs.flatten()]
+        for ax in axs.flatten():
+            ax.legend(loc=0)
         fig.canvas.draw()
 
         # add the next evaluation
