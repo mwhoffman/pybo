@@ -11,6 +11,8 @@ from __future__ import print_function
 import numpy as np
 import inspect
 import functools
+import os.path
+import cPickle as pickle
 
 import reggie
 
@@ -161,6 +163,7 @@ def solve_bayesopt(objective,
                    recommender='latent',
                    ninit=None,
                    verbose=False,
+                   pklfile='_model.pkl',
                    rng=None):
     """
     Maximize the given function using Bayesian Optimization.
@@ -195,20 +198,26 @@ def solve_bayesopt(objective,
     rng = rstate(rng)
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
+    # allocate a datastructure containing algorithm progress
+    xbest = list()
+
     # get modular components.
     policy = get_component(policy, policies, rng)
     solver = get_component(solver, solvers, rng, lstrip='solve_')
     recommender = get_component(recommender, recommenders, rng, lstrip='best_')
 
     # initialize model
-    if model is None:
+    if os.path.isfile(pklfile):
+        with open(pklfile, 'r') as fp:
+            xbest, model = pickle.load(fp)
+    elif model is None:
         model = init_model(objective, bounds, ninit, design='latin', rng=rng)
+        # save initialized model
+        with open(pklfile, 'w') as fp:
+            pickle.dump((xbest, model), fp)
     else:
         # copy the model in order to avoid overwriting
         model = model.copy()
-
-    # allocate a datastructure containing algorithm progress
-    xbest = list()
 
     # Bayesian optimization loop
     for i in xrange(niter):
@@ -226,6 +235,10 @@ def solve_bayesopt(objective,
         y = objective(x)
         model.add_data(x, y)
         xbest += [recommender(model, bounds)]
+
+        # save progress
+        with open(pklfile, 'w') as fp:
+            pickle.dump((xbest, model), fp)
 
         # print out the progress if requested.
         if verbose:
