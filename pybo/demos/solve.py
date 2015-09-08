@@ -12,4 +12,8 @@ from pybo import solve_bayesopt
 if __name__ == '__main__':
     # grab a test function and points at which to plot things
     f = Sinusoidal()
-    xbest, model = solve_bayesopt(f, f.bounds, niter=30, verbose=True)
+    xbest, model = solve_bayesopt(f,
+                                  f.bounds,
+                                  niter=30,
+                                  log='out.pkl',
+                                  verbose=True)

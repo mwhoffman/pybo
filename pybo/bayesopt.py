@@ -32,7 +32,21 @@ __all__ = ['solve_bayesopt', 'init_model']
 
 # MODEL INITIALIZATION ########################################################
 
-def init_model(f, bounds, ninit=None, design='latin', rng=None):
+def safe_dump(obj, filename=None):
+    if filename is not None:
+        with open(filename, 'w') as fp:
+            pickle.dump(obj, fp)
+
+
+def safe_load(filename=None):
+    if filename is not None and os.path.exists(filename):
+        with open(filename, 'r') as fp:
+            return pickle.load(fp)
+    else:
+        return [], None, None
+
+
+def init_model(f, bounds, ninit=None, design='latin', log=None, rng=None):
     """
     Initialize model and its hyperpriors using initial data.
 
@@ -42,6 +56,7 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
         ninit: int, number of design points to initialize model with.
         design: string, corresponding to a function in `pybo.inits`, with
             'init_' stripped.
+        log: string, path to file where the model is dumped.
         rng: int or random state.
 
     Returns:
@@ -52,14 +67,27 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
     ndim = len(bounds)
     ninit = ninit if (ninit is not None) else 3*ndim
 
-    # get initial design
-    init_design = getattr(inits, 'init_' + design)
-    xinit = init_design(bounds, ninit, rng)
-    yinit = np.full(ninit, np.nan)
+    # load log file contents
+    _, model, data = safe_load(log)
+
+    if model is not None:
+        # if the file included a model, return it right away
+        return model
+    elif data is not None:
+        # else if file included data, use the prescribed initial design
+        xinit, yinit = data
+    else:
+        # otherwise, file was empty, get initial design
+        init_design = getattr(inits, 'init_' + design)
+        xinit = init_design(bounds, ninit, rng)
+        yinit = np.full(ninit, np.nan)
 
     # sample the initial data
     for i, x in enumerate(xinit):
-        yinit[i] = f(x)
+        if np.isnan(yinit[i]):
+            yinit[i] = f(x)
+        # save progress
+        safe_dump(([], None, (xinit, yinit)), filename=log)
 
     # define initial setting of hyper parameters
     sn2 = 1e-6
@@ -80,6 +108,9 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
     # initialize the MCMC inference meta-model and add data
     model.add_data(xinit, yinit)
     model = reggie.MCMC(model, n=10, burn=100, rng=rng)
+
+    # save model
+    safe_dump(([], model, (xinit, yinit)), filename=log)
 
     return model
 
@@ -163,7 +194,7 @@ def solve_bayesopt(objective,
                    recommender='latent',
                    ninit=None,
                    verbose=False,
-                   pklfile='_model.pkl',
+                   log=None,
                    rng=None):
     """
     Maximize the given function using Bayesian Optimization.
@@ -198,26 +229,20 @@ def solve_bayesopt(objective,
     rng = rstate(rng)
     bounds = np.array(bounds, dtype=float, ndmin=2)
 
-    # allocate a datastructure containing algorithm progress
-    xbest = list()
-
     # get modular components.
     policy = get_component(policy, policies, rng)
     solver = get_component(solver, solvers, rng, lstrip='solve_')
     recommender = get_component(recommender, recommenders, rng, lstrip='best_')
 
-    # initialize model
-    if os.path.isfile(pklfile):
-        with open(pklfile, 'r') as fp:
-            xbest, model = pickle.load(fp)
-    elif model is None:
-        model = init_model(objective, bounds, ninit, design='latin', rng=rng)
-        # save initialized model
-        with open(pklfile, 'w') as fp:
-            pickle.dump((xbest, model), fp)
+    # load/initialize model
+    xbest, model_, _ = safe_load(log)
+
+    if model is None and model_ is None:
+        model = init_model(objective, bounds, ninit, log=log, rng=rng)
     else:
         # copy the model in order to avoid overwriting
-        model = model.copy()
+        model = model_ if model_ is not None else model.copy()
+        safe_dump(([], model, model.data), filename=log)
 
     # Bayesian optimization loop
     for i in xrange(niter):
@@ -237,8 +262,7 @@ def solve_bayesopt(objective,
         xbest += [recommender(model, bounds)]
 
         # save progress
-        with open(pklfile, 'w') as fp:
-            pickle.dump((xbest, model), fp)
+        safe_dump((xbest, model, model.data), filename=log)
 
         # print out the progress if requested.
         if verbose:
