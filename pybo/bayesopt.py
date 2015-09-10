@@ -236,16 +236,17 @@ def solve_bayesopt(objective,
 
     # load/initialize model
     xbest, model_, _ = safe_load(log)
+    nstart = len(xbest)
 
     if model is None and model_ is None:
         model = init_model(objective, bounds, ninit, log=log, rng=rng)
     else:
         # copy the model in order to avoid overwriting
         model = model_ if model_ is not None else model.copy()
-        safe_dump(([], model, model.data), filename=log)
+        safe_dump((xbest, model, model.data), filename=log)
 
     # Bayesian optimization loop
-    for i in xrange(niter):
+    for i in xrange(nstart, niter):
         if model.ndata == 0:
             # if the model has no data that means that we were given a model,
             # but that model had no initial data selected. So just fall back on
