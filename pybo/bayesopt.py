@@ -30,21 +30,28 @@ from .utils import rstate
 __all__ = ['solve_bayesopt', 'init_model']
 
 
-# MODEL INITIALIZATION ########################################################
+# DUMP/LOAD HELPERS ###########################################################
 
 def safe_dump(obj, filename=None):
+    """Safely dump the object to `filename` unless the name is None."""
     if filename is not None:
         with open(filename, 'w') as fp:
             pickle.dump(obj, fp)
 
 
 def safe_load(filename=None):
+    """
+    Safely load checkpoint data; if it doesn't exist return properly
+    formatted, but empty data.
+    """
     if filename is not None and os.path.exists(filename):
         with open(filename, 'r') as fp:
             return pickle.load(fp)
     else:
         return [], None, None
 
+
+# MODEL INITIALIZATION ########################################################
 
 def init_model(f, bounds, ninit=None, design='latin', log=None, rng=None):
     """
@@ -241,7 +248,7 @@ def solve_bayesopt(objective,
         model = init_model(objective, bounds, ninit, log=log, rng=rng)
     else:
         # copy the model in order to avoid overwriting
-        model = model_ if model_ is not None else model.copy()
+        model = model_ if (model_ is not None) else model.copy()
         safe_dump(([], model, model.data), filename=log)
 
     # Bayesian optimization loop
