@@ -1,27 +1,31 @@
 """
-This demo illustrates how to use pybo to optimize a black-box function
-that requires a human in the loop. This script will prompt the user
-for a numerical value at a particular design point every time it
-needs a new observation.
+This demo illustrates how to use pybo to optimize a black-box function that
+requires a human in the loop. This script will prompt the user for a numerical
+value at a particular design point every time it needs a new observation.
 """
+
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import numpy as np
 
 from ezplot import figure, show
-from benchfunk import Interactive
 from pybo import solve_bayesopt
+from pybo.utils import InteractiveQuery
+
+__all__ = []
 
 
-if __name__ == '__main__':
-    # initialize prompter and 1d bounds
-    prompter = Interactive()
-    bounds = np.array([0., 1.], ndmin=2)
+def main():
+    """Run the demo."""
+    # initialize interactive function and 1d bounds
+    f = InteractiveQuery()
+    bounds = [0, 1]
+    x = np.linspace(bounds[0], bounds[1], 100)
 
-    # define model and optimize
-    xbest, model = solve_bayesopt(prompter, bounds, niter=10)
-
-    # get our predictions
-    x = np.linspace(0, 1, 100)
+    # optimize the model and get final predictions
+    xbest, model = solve_bayesopt(f, bounds, niter=10)
     mu, s2 = model.predict(x[:, None])
 
     # plot the final model
@@ -32,3 +36,7 @@ if __name__ == '__main__':
     axs.scatter(model.data[0].ravel(), model.data[1])
     fig.canvas.draw()
     show()
+
+
+if __name__ == '__main__':
+    main()

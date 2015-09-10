@@ -5,29 +5,47 @@ algorithm as well as the final model. The point `xbest[-1]` is the final
 recommendation, i.e. the expected maximizer.
 """
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import numpy as np
 
 from ezplot import figure, show
-from benchfunk import Sinusoidal
 from pybo import solve_bayesopt
 
+__all__ = []
 
-if __name__ == '__main__':
+
+def f(x):
+    """
+    Test function that we will optimize. This is a simple sinusoidal function
+    whose maximum should be found very quickly.
+    """
+    x = float(x)
+    return -np.cos(x) - np.sin(3*x)
+
+
+def main():
+    """Run the demo."""
     # grab a test function
-    f = Sinusoidal()
+    bounds = [0, 2*np.pi]
+    x = np.linspace(bounds[0], bounds[1], 500)
 
     # solve the model
-    xbest, model = solve_bayesopt(f, f.bounds, niter=30, verbose=True)
+    xbest, model = solve_bayesopt(f, bounds, niter=30, verbose=True)
 
     # make some predictions
-    x = np.linspace(f.bounds[0, 0], f.bounds[0, 1], 500)
     mu, s2 = model.predict(x[:, None])
 
     # plot the final model
-    fig = figure()
-    axs = fig.gca()
-    axs.plot_banded(x, mu, 2*np.sqrt(s2))
-    axs.axvline(xbest[-1])
-    axs.scatter(model.data[0].ravel(), model.data[1])
-    fig.canvas.draw()
+    ax = figure().gca()
+    ax.plot_banded(x, mu, 2*np.sqrt(s2))
+    ax.axvline(xbest[-1])
+    ax.scatter(model.data[0].ravel(), model.data[1])
+    ax.figure.canvas.draw()
     show()
+
+
+if __name__ == '__main__':
+    main()
