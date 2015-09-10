@@ -1,6 +1,5 @@
-/pybo.egg-info/
+/*.egg-info/
+/htmlcov/
 /build/
 /dist/
 /src/
-*.c
-*.so

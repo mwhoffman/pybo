@@ -1,5 +1,4 @@
-pybo
-----
+# pybo
 
 A Python package for modular Bayesian optimization.
 
@@ -13,8 +12,8 @@ information about the function and its maximum.
 [![Coverage Status](https://coveralls.io/repos/mwhoffman/pybo/badge.png)]
 (https://coveralls.io/r/mwhoffman/pybo)
 
-Installation
-============
+
+## Installation
 
 The easiest way to install this package is by running
 
