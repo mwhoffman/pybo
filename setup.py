@@ -13,4 +13,4 @@ setup(name='pybo',
       license='Simplified BSD',
       packages=find_packages(),
       package_data={'': ['*.txt', '*.npz']},
-      install_requires=['numpy', 'scipy', 'reggie'])
+      install_requires=['numpy', 'scipy', 'reggie', 'ezplot'])

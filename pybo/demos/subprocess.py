@@ -1,58 +1,43 @@
 """
-This demo illustrates how pybo can be used to optimize a black-box
-written in any other language by simply spawning off a new shell
-process and running a script. In this particular example, we train
-a multi-layered perceptron on the MNIST dataset, and optimize its
-learning parameters using pybo.
+This demo illustrates how to use pybo to optimize a black-box function that
+calls an external process. In particular this calls the command line calculator
+`bc` to optimize a simple quadratic.
 """
 
-import numpy as np
-import os
-import os.path
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
-from benchfunk.functions import Subprocess
-import pybo
-import reggie
+import numpy as np
+
+from ezplot import figure, show
+from pybo import solve_bayesopt
+from pybo.utils import SubprocessQuery
+
+__all__ = []
+
+
+def main():
+    """Run the demo."""
+    # grab a test function
+    f = SubprocessQuery("bc <<< 'scale=8; x={}; -((x-3)^2)'")
+    bounds = [0, 8]
+    x = np.linspace(bounds[0], bounds[1], 500)
+
+    # solve the model
+    xbest, model = solve_bayesopt(f, bounds, niter=30, verbose=True)
+
+    # make some predictions
+    mu, s2 = model.predict(x[:, None])
+
+    # plot the final model
+    ax = figure().gca()
+    ax.plot_banded(x, mu, 2*np.sqrt(s2))
+    ax.axvline(xbest[-1])
+    ax.scatter(model.data[0].ravel(), model.data[1])
+    ax.figure.canvas.draw()
+    show()
 
 
 if __name__ == '__main__':
-    # path to torch demos
-    path = os.path.join(os.environ['HOME'],
-                        'torch-demos',
-                        'train-a-digit-classifier')
-    script = os.path.join(path, 'train-on-mnist.lua')
-
-    # define command
-    command = ' '.join([
-        'th',
-        script,
-        '--verbose',
-        '--model=mlp',               # remove to use default convnet
-        '--batchSize=100',
-        '--epochs=1',
-        '--learningRate={}',
-        '--momentum={}',
-        '--coefL1={}',
-        '--coefL2={}',
-    ])
-    # add torch demo repo to path
-    command = 'cd {}; {}; cd {};'.format(
-        path,
-        command,
-        os.path.abspath(os.path.curdir)
-    )
-
-    # generate a black-box function from the shell command
-    mnist = Subprocess(command)
-
-    # define bounds for each input
-    bounds = np.array([[0., 1.],
-                       [0., 1.],
-                       [0., 1.],
-                       [0., 1.]], ndmin=2)
-
-    # optimize
-    model = reggie.make_gp(1., 10., 0.1, 0., ndim=len(bounds))
-    xbest, model = pybo.solve_bayesopt(mnist, bounds, model, niter=20)
-
-    print xbest
+    main()
