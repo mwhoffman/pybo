@@ -105,7 +105,7 @@ def init_model(f, bounds, ninit=None, design='latin', log=None, rng=None):
     model = reggie.make_gp(sn2, rho, ell, bias)
 
     # define priors
-    model.params['like.sn2'].set_prior('lognormal', -2, 1)
+    model.params['like.sn2'].set_prior('horseshoe', 0.1)
     model.params['kern.rho'].set_prior('lognormal', np.log(rho), 1.)
     model.params['kern.ell'].set_prior('uniform', ell / 100, ell * 10)
     model.params['mean.bias'].set_prior('normal', bias, rho)
