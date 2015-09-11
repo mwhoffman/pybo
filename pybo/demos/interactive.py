@@ -25,15 +25,15 @@ def main():
     x = np.linspace(bounds[0], bounds[1], 100)
 
     # optimize the model and get final predictions
-    xbest, model = solve_bayesopt(f, bounds, niter=10)
+    xbest, model, info = solve_bayesopt(f, bounds, niter=10)
     mu, s2 = model.predict(x[:, None])
 
     # plot the final model
     fig = figure()
     axs = fig.gca()
     axs.plot_banded(x, mu, 2*np.sqrt(s2))
-    axs.axvline(xbest[-1])
-    axs.scatter(model.data[0].ravel(), model.data[1])
+    axs.axvline(xbest)
+    axs.scatter(info.x.ravel(), info.y)
     fig.canvas.draw()
     show()
 
