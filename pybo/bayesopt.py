@@ -11,6 +11,9 @@ from __future__ import print_function
 import numpy as np
 import inspect
 import functools
+import os.path
+import cPickle as pickle
+import collections
 
 import reggie
 
@@ -28,9 +31,33 @@ from .utils import rstate
 __all__ = ['solve_bayesopt', 'init_model']
 
 
+# DUMP/LOAD HELPERS ###########################################################
+
+Info = collections.namedtuple('Info', ['x', 'y', 'xbest'])
+
+
+def safe_dump(model, info, filename=None):
+    """Safely dump the object to `filename` unless the name is None."""
+    if filename is not None:
+        with open(filename, 'w') as fp:
+            pickle.dump((model, info), fp)
+
+
+def safe_load(filename=None):
+    """
+    Safely load checkpoint data; if it doesn't exist return properly
+    formatted, but empty data.
+    """
+    if filename is not None and os.path.exists(filename):
+        with open(filename, 'r') as fp:
+            return pickle.load(fp)
+    else:
+        return None, Info([], [], [])
+
+
 # MODEL INITIALIZATION ########################################################
 
-def init_model(f, bounds, ninit=None, design='latin', rng=None):
+def init_model(f, bounds, ninit=None, design='latin', log=None, rng=None):
     """
     Initialize model and its hyperpriors using initial data.
 
@@ -40,6 +67,7 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
         ninit: int, number of design points to initialize model with.
         design: string, corresponding to a function in `pybo.inits`, with
             'init_' stripped.
+        log: string, path to file where the model is dumped.
         rng: int or random state.
 
     Returns:
@@ -47,37 +75,47 @@ def init_model(f, bounds, ninit=None, design='latin', rng=None):
     """
     rng = rstate(rng)
     bounds = np.array(bounds, dtype=float, ndmin=2)
-    ndim = len(bounds)
-    ninit = ninit if (ninit is not None) else 3*ndim
+    ninit = ninit if (ninit is not None) else 3*len(bounds)
+    model, info = safe_load(log)
 
-    # get initial design
-    init_design = getattr(inits, 'init_' + design)
-    xinit = init_design(bounds, ninit, rng)
-    yinit = np.full(ninit, np.nan)
+    if model is not None:
+        # if we've already constructed a model return it right away
+        return model
+    elif len(info.x) == 0:
+        # otherwise get the initial design
+        design = getattr(inits, 'init_' + design)
+        info.x.extend(design(bounds, ninit, rng))
+        info.y.extend(np.nan for _ in xrange(ninit))
 
     # sample the initial data
-    for i, x in enumerate(xinit):
-        yinit[i] = f(x)
+    for i, x in enumerate(info.x):
+        if np.isnan(info.y[i]):
+            info.y[i] = f(x)
+        # save progress
+        safe_dump(None, info, filename=log)
 
     # define initial setting of hyper parameters
     sn2 = 1e-6
-    rho = yinit.max() - yinit.min() if (len(yinit) > 1) else 1.
+    rho = max(info.y) - min(info.y) if (len(info.y) > 1) else 1.
     rho = 1. if (rho < 1e-1) else rho
     ell = 0.25 * (bounds[:, 1] - bounds[:, 0])
-    bias = np.mean(yinit) if (len(yinit) > 0) else 0.
+    bias = np.mean(info.y) if (len(info.y) > 0) else 0.
 
     # initialize the base model
     model = reggie.make_gp(sn2, rho, ell, bias)
 
     # define priors
-    model.params['like.sn2'].set_prior('lognormal', -2, 1)
+    model.params['like.sn2'].set_prior('horseshoe', 0.1)
     model.params['kern.rho'].set_prior('lognormal', np.log(rho), 1.)
     model.params['kern.ell'].set_prior('uniform', ell / 100, ell * 10)
     model.params['mean.bias'].set_prior('normal', bias, rho)
 
     # initialize the MCMC inference meta-model and add data
-    model.add_data(xinit, yinit)
+    model.add_data(info.x, info.y)
     model = reggie.MCMC(model, n=10, burn=100, rng=rng)
+
+    # save model
+    safe_dump(model, info, filename=log)
 
     return model
 
@@ -161,6 +199,7 @@ def solve_bayesopt(objective,
                    recommender='latent',
                    ninit=None,
                    verbose=False,
+                   log=None,
                    rng=None):
     """
     Maximize the given function using Bayesian Optimization.
@@ -200,18 +239,17 @@ def solve_bayesopt(objective,
     solver = get_component(solver, solvers, rng, lstrip='solve_')
     recommender = get_component(recommender, recommenders, rng, lstrip='best_')
 
-    # initialize model
-    if model is None:
-        model = init_model(objective, bounds, ninit, design='latin', rng=rng)
-    else:
-        # copy the model in order to avoid overwriting
-        model = model.copy()
+    # load/initialize model
+    model_, info = safe_load(log)
 
-    # allocate a datastructure containing algorithm progress
-    xbest = list()
+    if (model is None) and (model_ is None):
+        model = init_model(objective, bounds, ninit, log=log, rng=rng)
+    else:
+        # copy the model to avoid changing it in the outer scope
+        model = model_ if (model_ is not None) else model.copy()
 
     # Bayesian optimization loop
-    for i in xrange(niter):
+    for i in xrange(len(info.xbest), niter):
         if model.ndata == 0:
             # if the model has no data that means that we were given a model,
             # but that model had no initial data selected. So just fall back on
@@ -225,16 +263,21 @@ def solve_bayesopt(objective,
         # make an observation and record it.
         y = objective(x)
         model.add_data(x, y)
-        xbest += [recommender(model, bounds)]
+        xbest = recommender(model, bounds)
+
+        # save progress
+        info.x.append(x)
+        info.y.append(y)
+        info.xbest.append(xbest)
+        safe_dump(model, info, filename=log)
 
         # print out the progress if requested.
         if verbose:
             print('i={:s}, x={:s}, y={:s}, xbest={:s}'
-                  .format(int2str(i),
-                          array2str(x),
-                          float2str(y),
-                          array2str(xbest[-1])))
+                  .format(int2str(i), array2str(x), float2str(y),
+                          array2str(xbest)))
 
-    xbest = np.array(xbest, ndmin=2)
+    # make sure the returned info contains arrays
+    info = Info(*[np.array(_) for _ in info])
 
-    return xbest, model
+    return xbest, model, info

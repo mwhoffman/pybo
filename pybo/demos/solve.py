@@ -33,7 +33,7 @@ def main():
     x = np.linspace(bounds[0], bounds[1], 500)
 
     # solve the model
-    xbest, model = solve_bayesopt(f, bounds, niter=30, verbose=True)
+    xbest, model, info = solve_bayesopt(f, bounds, niter=30, verbose=True)
 
     # make some predictions
     mu, s2 = model.predict(x[:, None])
@@ -41,8 +41,8 @@ def main():
     # plot the final model
     ax = figure().gca()
     ax.plot_banded(x, mu, 2*np.sqrt(s2))
-    ax.axvline(xbest[-1])
-    ax.scatter(model.data[0].ravel(), model.data[1])
+    ax.axvline(xbest)
+    ax.scatter(info.x.ravel(), info.y)
     ax.figure.canvas.draw()
     show()
 
