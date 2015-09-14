@@ -31,15 +31,17 @@ def f(x):
 
 def main():
     """Run the demo."""
-    # define the bounds over which we'll optimize, the optimal x for comparison,
-    # and a sequence of test points
+    # define the bounds over which we'll optimize, the optimal x for
+    # comparison, and a sequence of test points
     bounds = np.array([[0.5, 2.5]])
     xopt = 0.54856343
+    fopt = f(xopt)
     x = np.linspace(bounds[0][0], bounds[0][1], 500)
 
     # get initial data and some test points.
-    X = inits.init_latin(bounds, 3)
-    Y = np.array([f(x_) for x_ in X])
+    X = list(inits.init_latin(bounds, 3))
+    Y = [f(x_) for x_ in X]
+    F = []
 
     # initialize the model
     model = make_gp(0.01, 1.9, 0.1, 0)
@@ -53,23 +55,29 @@ def main():
 
     # make a model which samples parameters
     model = MCMC(model, n=20, rng=None)
-    fbest = list()
 
     # create a new figure
     fig = figure(figsize=(10, 6))
 
     while True:
-        # get index to solve it and plot it
-        index = policies.EI(model, bounds, 0.1)
+        # get acquisition function (or index)
+        index = policies.EI(model, bounds, X, xi=0.1)
 
         # get the recommendation and the next query
-        xbest = recommenders.best_observed(model, bounds)
+        xbest = recommenders.best_incumbent(model, bounds, X)
         xnext, _ = solvers.solve_lbfgs(index, bounds)
+        ynext = f(xnext)
 
-        # evaluate the posterior and the acquisition function
+        # evaluate the posterior before updating the model for plotting
         mu, s2 = model.predict(x[:, None])
-        fbest.append(f(xbest))
 
+        # record our data and update the model
+        X.append(xnext)
+        Y.append(ynext)
+        F.append(f(xbest))
+        model.add_data(xnext, ynext)
+
+        # PLOT EVERYTHING
         fig.clear()
         ax1 = fig.add_subplotspec((2, 2), (0, 0), hidex=True)
         ax2 = fig.add_subplotspec((2, 2), (1, 0), hidey=True, sharex=ax1)
@@ -77,7 +85,7 @@ def main():
 
         # plot the posterior and data
         ax1.plot_banded(x, mu, 2*np.sqrt(s2))
-        ax1.scatter(model.data[0].ravel(), model.data[1])
+        ax1.scatter(np.ravel(X), Y)
         ax1.axvline(xbest)
         ax1.axvline(xnext, color='g')
         ax1.set_ylim(-6, 3)
@@ -90,17 +98,14 @@ def main():
         ax2.set_title('current policy (xnext)')
 
         # plot the latent function at recomended points
-        ax3.axhline(f(xopt))
-        ax3.plot(fbest)
+        ax3.plot(F)
+        ax3.axhline(fopt)
         ax3.set_ylim(0.4, 0.9)
         ax3.set_title('value of recommendation')
 
         # draw
         fig.canvas.draw()
         show()
-
-        # add the next evaluation
-        model.add_data(xnext, f(xnext))
 
 
 if __name__ == '__main__':
