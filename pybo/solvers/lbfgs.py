@@ -43,6 +43,8 @@ def solve_lbfgs(f,
         # TODO: The following line could be replaced with a regular grid or a
         # Sobol grid.
         xgrid = init_uniform(bounds, ngrid, rng)
+    else:
+        xgrid = np.array(xgrid, ndmin=2)
 
     # compute func_grad on points xgrid
     finit = f(xgrid, grad=False)

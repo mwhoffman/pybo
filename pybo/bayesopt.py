@@ -248,22 +248,26 @@ def solve_bayesopt(objective,
         # copy the model to avoid changing it in the outer scope
         model = model_ if (model_ is not None) else model.copy()
 
+    # if we're given a model then initialize the model with a single point in
+    # the middle.
+    if len(info.x) == 0:
+        x = inits.init_middle(bounds)[0]
+        y = objective(x)
+        info.x.append(x)
+        info.y.append(y)
+        model.add_data(x, y)
+        safe_dump(model, info, filename=log)
+
     # Bayesian optimization loop
     for i in xrange(len(info.xbest), niter):
-        if model.ndata == 0:
-            # if the model has no data that means that we were given a model,
-            # but that model had no initial data selected. So just fall back on
-            # a very simple initialization scheme.
-            x = inits.init_middle(bounds)[0]
-        else:
-            # get the next point to evaluate.
-            index = policy(model, bounds)
-            x, _ = solver(index, bounds)
+        # get the next point to evaluate.
+        index = policy(model, bounds, info.x)
+        x, _ = solver(index, bounds)
 
         # make an observation and record it.
         y = objective(x)
         model.add_data(x, y)
-        xbest = recommender(model, bounds)
+        xbest = recommender(model, bounds, info.x)
 
         # save progress
         info.x.append(x)
