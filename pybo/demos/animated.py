@@ -105,7 +105,7 @@ def main():
 
         # draw
         fig.canvas.draw()
-        show()
+        show(block=False)
 
 
 if __name__ == '__main__':
