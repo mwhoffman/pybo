@@ -1,5 +1,5 @@
 """
-Setup script.
+Setup script for pybo.
 """
 
 import os
@@ -21,7 +21,7 @@ def main():
     NAME, DESCRIPTION, LONG_DESCRIPTION = read('README.md')
     setuptools.setup(
         name=NAME,
-        version='0.0.1',
+        version='0.2',
         author='Matthew W. Hoffman',
         author_email='mwh30@cam.ac.uk',
         url='http://github.com/mwhoffman/' + NAME,
@@ -29,8 +29,7 @@ def main():
         long_description=LONG_DESCRIPTION,
         license='Simplified BSD',
         packages=setuptools.find_packages(),
-        package_data={'': ['*.txt', '*.npz']},
-        install_requires=['numpy', 'scipy', 'reggie', 'nose', 'ezplot'])
+        install_requires=['numpy', 'scipy', 'reggie', 'ezplot'])
 
 
 if __name__ == '__main__':

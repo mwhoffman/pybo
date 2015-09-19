@@ -1,4 +1,6 @@
 numpy
-nose
-git+https://github.com/mwhoffman/reggie.git#egg=reggie
+scipy
+matplotlib
 git+https://github.com/mwhoffman/ezplot.git#egg=ezplot
+git+https://github.com/mwhoffman/reggie.git#egg=reggie
+git+https://github.com/mwhoffman/pybo.git#egg=pybo
