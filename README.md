@@ -30,3 +30,21 @@ running
     python -m pybo.demos.animated
 
 A full list of demos can be viewed [here](pybo/demos).
+
+
+## Previous versions
+
+The current version of `pybo` has undergone some change to its interface from
+previous versions. The previous stable release(s) of the package can be found
+[here][releases]. For example, those users interested in a graphical interface
+to `pybo` can take a look at [ProjectB][projectb], however this package
+requires a previous version which can be installed using:
+
+    pip install -r https://github.com/mwhoffman/pybo/raw/v0.1/requirements.txt
+    pip install git+https://github.com/mwhoffman/pybo.git@v0.1
+
+[releases]: https://github.com/mwhoffman/pybo/releases
+[projectb]: https://github.com/udoniyor/projectb
+
+Note the *v0.1* tag in the installation lines which corresponds to the relevant
+release.
