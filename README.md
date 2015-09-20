@@ -21,6 +21,7 @@ information about the function and its maximum.
 The easiest way to install this package is by running
 
     pip install -r https://github.com/mwhoffman/pybo/raw/master/requirements.txt
+    pip install git+https://github.com/mwhoffman/pybo.git
 
 which will install the package and any of its dependencies. Once the package is
 installed the included demos can be run directly via python. For example, by
