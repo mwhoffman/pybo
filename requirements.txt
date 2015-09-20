@@ -1,6 +1,8 @@
+# general dependencies
 numpy
 scipy
 matplotlib
-git+https://github.com/mwhoffman/mwhutils.git#egg=mwhutils
-git+https://github.com/mwhoffman/pygp.git#egg=pygp
-git+https://github.com/mwhoffman/pybo.git@v0.1#egg=pybo
+
+# pybo dependencies
+git+https://github.com/mwhoffman/ezplot.git#egg=ezplot
+git+https://github.com/mwhoffman/reggie.git#egg=reggie

@@ -1,4 +1,14 @@
 [run]
 branch = True
-omit = 
+omit =
     pybo/demos/*
+    tests/*
+    setup.py
+
+[report]
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # ignore NotImplementedError exceptions
+    raise NotImplementedError
