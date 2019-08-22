@@ -3,9 +3,9 @@ Animated demo showing progress of Bayesian optimization on a simple
 (but highly multimodal) one-dimensional function.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 

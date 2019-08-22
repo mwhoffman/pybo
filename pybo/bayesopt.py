@@ -4,15 +4,15 @@ maximize some acquisition function, generally given as a simple function of the
 posterior sufficient statistics.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 import inspect
 import functools
 import os.path
-import cPickle as pickle
+import pickle as pickle
 import collections
 
 import reggie
@@ -85,7 +85,7 @@ def init_model(f, bounds, ninit=None, design='latin', log=None, rng=None):
         # otherwise get the initial design
         design = getattr(inits, 'init_' + design)
         info.x.extend(design(bounds, ninit, rng))
-        info.y.extend(np.nan for _ in xrange(ninit))
+        info.y.extend(np.nan for _ in range(ninit))
 
     # sample the initial data
     for i, x in enumerate(info.x):
@@ -163,9 +163,9 @@ def get_component(value, module, rng, lstrip=''):
     else:
         valid = set()
 
-    if not valid.issuperset(kwargs.keys()):
+    if not valid.issuperset(list(kwargs.keys())):
         raise ValueError("unknown arguments for {:s}: {:s}"
-                         .format(func.__name__, ', '.join(kwargs.keys())))
+                         .format(func.__name__, ', '.join(list(kwargs.keys()))))
 
     if 'rng' in argspec.args:
         kwargs['rng'] = rng
@@ -259,7 +259,7 @@ def solve_bayesopt(objective,
         safe_dump(model, info, filename=log)
 
     # Bayesian optimization loop
-    for i in xrange(len(info.xbest), niter):
+    for i in range(len(info.xbest), niter):
         # get the next point to evaluate.
         index = policy(model, bounds, info.x)
         x, _ = solver(index, bounds)

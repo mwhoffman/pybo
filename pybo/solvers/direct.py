@@ -3,9 +3,9 @@ Interface to the nlopt DIRECT implementation.
 """
 
 # future imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 # by default export nothing.
 __all__ = []

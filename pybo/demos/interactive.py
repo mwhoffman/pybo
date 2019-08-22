@@ -4,9 +4,9 @@ requires a human in the loop. This script will prompt the user for a numerical
 value at a particular design point every time it needs a new observation.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 

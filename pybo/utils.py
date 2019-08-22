@@ -2,9 +2,9 @@
 Various utility functions.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 import re
@@ -50,7 +50,7 @@ class InteractiveQuery(object):
         self.prompt = prompt
 
     def __call__(self, x):
-        y = input(self.prompt.format(x))
+        y = eval(input(self.prompt.format(x)))
         if not isinstance(y, (np.int, np.long, np.float)):
             # FIXME: this should probably just re-query the user rather than
             # raising an exception.

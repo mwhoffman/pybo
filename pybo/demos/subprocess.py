@@ -4,9 +4,9 @@ calls an external process. In particular this calls the command line calculator
 `bc` to optimize a simple quadratic.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 

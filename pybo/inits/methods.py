@@ -2,9 +2,9 @@
 Implementation of methods for sampling initial points.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 
@@ -53,7 +53,7 @@ def init_latin(bounds, n=None, rng=None):
     X = bounds[:, 0] + w * (np.arange(n)[:, None] + rng.rand(n, d)) / n
 
     # shuffle each dimension.
-    for i in xrange(d):
+    for i in range(d):
         X[:, i] = rng.permutation(X[:, i])
 
     return X

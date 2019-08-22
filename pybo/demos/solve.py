@@ -5,9 +5,9 @@ algorithm as well as the final model. The point `xbest[-1]` is the final
 recommendation, i.e. the expected maximizer.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+
+
 
 import numpy as np
 

@@ -21,7 +21,7 @@ def main():
     NAME, DESCRIPTION, LONG_DESCRIPTION = read('README.md')
     setuptools.setup(
         name=NAME,
-        version='0.2',
+        version='0.3',
         author='Matthew W. Hoffman',
         author_email='mwh30@cam.ac.uk',
         url='http://github.com/mwhoffman/' + NAME,
